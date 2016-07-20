@@ -1,0 +1,11 @@
+{
+  "compilerOptions": {
+    "module": "umd",
+    "outDir": "dist/",
+    "target": "es3",
+    "declaration": true,
+    "moduleResolution": "node",
+    "experimentalDecorators": true
+  },
+  "exclude": ["dist"]
+}
