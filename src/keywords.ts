@@ -1,5 +1,6 @@
 import {Bone} from 'skeletik';
 import {keywords as parserKeywords} from 'skeletik/preset/xtpl';
+import {interpolate} from './utils';
 
 export type jscode = [string, string];
 export type handle = (attrs:any) => jscode;
@@ -26,22 +27,6 @@ export function register(name:string, details:string|string[], convertTo:jscode|
 
 		return `${open}${content}${end}`;
 	};
-}
-
-function interpolate(value:string):string {
-	const start = value.indexOf('{');
-	
-	if (start > -1) {
-		const length = value.length;
-
-		if (start === 0 && value.charAt(length - 1) === '}') {
-			return `' + ${value.slice(1, -1)} + '`;
-		} else {
-			return  
-		}
-	} 
-
-	return value;
 }
 
 function renderToString(bone:Bone):string {
@@ -72,10 +57,16 @@ function renderToString(bone:Bone):string {
 // 	'( @test:var )',
 // 	['if ($test) {', '}']
 // );
-//
+
 // register(
 // 	'else',
 // 	'if ( @test:var )',
 // 	(attrs) => [attrs.test ? 'else if ($test) {' : 'else {', '}'],
 // 	{optionalDetails: true}
+// );
+
+// register(
+// 	'for',
+// 	'($as:var in $data:js)',
+// 	['$data.forEach(function ($as) {', '})']
 // );
