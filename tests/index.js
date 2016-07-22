@@ -3,13 +3,21 @@ const json = require('../dist/mode/json').default;
 const string = require('../dist/mode/string').default;
 
 const frag = xtpl.parse(`
-h1 | Hello, %username%!
-if (attrs.ready)
-	p | Yeah.
-	b + i | foo
+!html
+html
+	head > title | La-la-la
+	body
+		h1 | Hello, %username%!
+		if (attrs.ready)
+			p | Yeah.
+			b > i | foo
+		else 
+			x | true
+		ul > for (val in data)
+			li | {val}
 `.trim());
 
 xtpl.compile(frag, {
-	mode: json,
+	mode: string({prettify: true}),
 	scope: ['attrs']
 });

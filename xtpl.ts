@@ -29,7 +29,7 @@ export default {
 		});
 
 		source.push('\n//---START---\n');
-		console.log(mode.compile(fragment).to('ROOT'));
+		console.log(mode(fragment));
 		source.push('\n//---END---\n');
 
 		source.push('  return __RESULT;');
