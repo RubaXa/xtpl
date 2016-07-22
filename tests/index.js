@@ -1,6 +1,6 @@
 const xtpl = require('../dist/xtpl').default;
-const json = require('../dist/mode/json').default;
-const string = require('../dist/mode/string').default;
+const jsonMode = require('../dist/mode/json').default;
+const stringMode = require('../dist/mode/string').default;
 
 const frag = xtpl.parse(`
 !html
@@ -17,7 +17,9 @@ html
 			li | {val}
 `.trim());
 
-xtpl.compile(frag, {
-	mode: string({prettify: true}),
+const result = xtpl.compile(frag, {
+	mode: stringMode({prettify: true}),
 	scope: ['attrs']
 });
+
+console.log(result);

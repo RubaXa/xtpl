@@ -19,26 +19,22 @@ export default {
 	compile<T>(fragment:Bone, options:XCompileOptions):string {
 		const source = [
 			'return function template(__SCOPE__) {',
-			'  var __RESULT;',
 		];
-		const mode = options.mode;
-		const tags = mode.tags;
+		const artifact = options.mode(fragment);
 
 		options.scope.forEach(name => {
 			source.push(`  var ${name} = __SCOPE__.${name};`);
 		});
 
 		source.push('\n//---START---\n');
-		console.log(mode(fragment));
+		source.push(artifact.before || '');
+		source.push(artifact.code || '');
+		source.push(artifact.after || '');
 		source.push('\n//---END---\n');
 
-		source.push('  return __RESULT;');
+		source.push(`  return ${artifact.export}`);
 		source.push('}');
 
 		return source.join('\n');
-	},
-
-	registerMode(name:string, describe) {
-
 	}
 };

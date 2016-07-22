@@ -10,6 +10,7 @@ const kw = {
 
 export default (options) => (node) => {
 	let varNum = 0;
+	let maxVarNum = 0;
 	const staticFragments = [];
 
 	function processing(node) {
@@ -81,7 +82,7 @@ export default (options) => (node) => {
 				children.forEach((child, i) => {
 					if (child.computed) {
 						if (staticChildren) {
-							localVar = `__V${++varNum}`;
+							localVar = `__V${varNum++}`;
 							staticChildren = false;
 							
 							code = `\n${localVar} = ${code}]}\n${rootVar}.children.push(${localVar})\n`;
@@ -102,6 +103,7 @@ export default (options) => (node) => {
 				if (staticChildren) {
 					code += (length > 1 ? ']' : '') + '}';
 				} else {
+					maxVarNum = Math.max(maxVarNum, varNum);
 					varNum--;
 				}
 			} else {
@@ -116,8 +118,14 @@ export default (options) => (node) => {
 		return code;
 	}
 
-	// return JSON.stringify(processing(node), null, 2);
-	console.log(compile(processing(node), 'ROOT'));
-	console.log(staticFragments);
-	return;
+	const code = compile(processing(node), '__ROOT');
+
+	return {
+		before: 'var ' + [
+			Array.apply(null, Array(5)).map((_, i) => `__V${i}`).join(', '),
+			staticFragments.map((code, i) => `__S${i+1} = ${code}`).join(',\n')
+		].join(','),
+		code,
+		export: '__ROOT'
+	};
 };

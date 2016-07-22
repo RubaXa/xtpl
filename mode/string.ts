@@ -75,5 +75,8 @@ export default (options:any = {}) => (node) => {
 		return content;
 	}
 
-	return clean(compile(node, ''));
+	return {
+		code: clean(compile(node, '')),
+		export: '__ROOT',
+	};
 };

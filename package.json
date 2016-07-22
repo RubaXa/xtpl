@@ -4,7 +4,7 @@
   "description": "xtpl",
   "main": "dist/xtpl.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "ntsc && node tests/index.js"
   },
   "repository": {
     "type": "git",
