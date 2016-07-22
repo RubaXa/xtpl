@@ -1,4 +1,5 @@
 import xtplParser, {DTD_TYPE, COMMENT_TYPE, TEXT_TYPE, KEYWORD_TYPE, HIDDEN_CLASS_TYPE} from 'skeletik/preset/xtpl';
+import {compile as compileKeyword} from '../src/keywords';
 
 const _s = JSON.stringify;
 
@@ -41,9 +42,12 @@ export default (options:any = {}) => (node) => {
 
 			if (type === '#root') {
 				code = content;
-			} else if (type === 'text') {
+			} else if (KEYWORD_TYPE === type) {
+				const pair = compileKeyword(raw.name, raw.attrs);
+				return pair[0] + content + pair[1];
+			} else if (TEXT_TYPE === type) {
 				code = push(raw.value);
-			} else if (type === 'comment') {
+			} else if (COMMENT_TYPE === type) {
 				code = push(`${pad}<!--${raw.value}-->${NL}`);
 			} else if (HIDDEN_CLASS_TYPE === type) {
 				return content + NL;

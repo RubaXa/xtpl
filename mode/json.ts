@@ -1,12 +1,7 @@
 import xtplParser, {DTD_TYPE, COMMENT_TYPE, TEXT_TYPE, KEYWORD_TYPE, TAG_TYPE} from 'skeletik/preset/xtpl';
+import {compile as compileKeyword} from '../src/keywords';
 
 const _s = JSON.stringify;
-
-const kw = {
-	'if': (attrs) => [`if (${attrs.test}) {`, `}`],
-	'else': (attrs) => [`else ${attrs.test ? `if (${attrs.test})` : ''} {`, `}`],
-	'for': (attrs) => [`EACH(${attrs.data}, function (${attrs.as}) {`, `})`]
-};
 
 export default (options) => (node) => {
 	let varNum = 0;
@@ -42,7 +37,7 @@ export default (options) => (node) => {
 		let code;
 
 		if (type === KEYWORD_TYPE) {
-			const pair = kw[name](attrs);
+			const pair = compileKeyword(name, attrs);
 			let staticPool = [];
 			let flush = () => {
 				if (staticPool.length) {
@@ -67,6 +62,8 @@ export default (options) => (node) => {
 			code += `\n${pair[1]}`;
 		} else if (type === TEXT_TYPE) {
 			code = _s(value);
+		} else if (type === COMMENT_TYPE) {
+			code = `{tag: "!", children: ${_s(value)} }`;
 		} else {
 			const length = children.length;
 			code = `{tag: ${_s(name)}`;

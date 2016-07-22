@@ -13,8 +13,6 @@ html
 			b > i | foo
 		else 
 			x | true
-		ul > for (val in data)
-			li | {val}
 `.trim());
 
 const result = xtpl.compile(frag, {
