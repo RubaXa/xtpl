@@ -15,7 +15,7 @@ function replace(preset:string, attrs:any):string {
 }
 
 export function register(name:string, details:string|string[], convertTo:(attrs:any) => jscode, options:XKeywordOptions = {}) {
-	parserKeywords.add(name, ` ${details}`, {optional: options.optionalDetails});
+	parserKeywords.add(name, details, {optional: options.optionalDetails});
 	keywords[name] = (attrs:any):jscode => convertTo(attrs);
 }
 
@@ -25,19 +25,19 @@ export function compile(name:string, attrs:any):jscode {
 
 register(
 	'if',
-	'( @test:js )',
+	' ( @test:js ) ',
 	({test}) => [`if (${test}) {`, '}']
 );
 
 register(
 	'else',
-	'if ( @test:js )',
+	' if ( @test:js ) ',
 	({test}) => [test ? `else if (${test}) {` : 'else {', '}'],
 	{optionalDetails: true}
 );
 
 register(
 	'for',
-	'( $as:var in $data:js )',
-	({data, as}) => [`EACH(${data}, function (${as}) {`, '})']
+	[' ( @as:var in @data:js ) ', ' ( [@key:var, @as:var] in @data:js ) '],
+	({data, as, key}) => [`EACH(${data}, function (${as}, ${key || '$index'}) {`, '})']
 );

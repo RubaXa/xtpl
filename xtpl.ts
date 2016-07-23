@@ -13,24 +13,27 @@ const MODE = {
 
 export default {
 	parse(input:string):Bone {
-		return xtplParser(input);
+		try {
+			return xtplParser(input);
+		} catch (err) {
+			console.log(err.pretty);
+			throw err;
+		}
 	},
 
 	compile<T>(fragment:Bone, options:XCompileOptions):string {
-		const source = [
-			'return function template(__SCOPE__) {',
-		];
+		const source = ['return function template(__SCOPE__) {'];
 		const artifact = options.mode(fragment);
 
 		options.scope.forEach(name => {
 			source.push(`  var ${name} = __SCOPE__.${name};`);
 		});
 
-		source.push('\n//---START---\n');
-		source.push(artifact.before || '');
-		source.push(artifact.code || '');
-		source.push(artifact.after || '');
-		source.push('\n//---END---\n');
+		source.push('//---START---', '');
+		source.push(artifact.before || '', '');
+		source.push(artifact.code || '', '');
+		source.push(artifact.after || '', '');
+		source.push('//---END---', '');
 
 		source.push(`  return ${artifact.export}`);
 		source.push('}');

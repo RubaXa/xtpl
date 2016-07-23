@@ -4,7 +4,7 @@
   "description": "xtpl",
   "main": "dist/xtpl.js",
   "scripts": {
-    "test": "ntsc && node tests/index.js"
+    "test": "tsc && node tests/index.js"
   },
   "repository": {
     "type": "git",
