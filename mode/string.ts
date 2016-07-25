@@ -82,6 +82,6 @@ export default (options:any = {}) => (node) => {
 	return {
 		before: 'var __ROOT = "";',
 		code: clean(compile(node, '')),
-		export: '__ROOT',
+		export: '__ROOT.trim()',
 	};
 };

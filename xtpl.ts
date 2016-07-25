@@ -21,12 +21,12 @@ export default {
 		}
 	},
 
-	compile<T>(fragment:Bone, options:XCompileOptions):string {
-		const source = ['return function template(__SCOPE__) {'];
+	compile<T>(fragment:Bone, options:XCompileOptions):(scope) => T {
+		const source = ['__SCOPE__ = __SCOPE__ || {};'];
 		const artifact = options.mode(fragment);
 
 		options.scope.forEach(name => {
-			source.push(`  var ${name} = __SCOPE__.${name};`);
+			source.push(`var ${name} = __SCOPE__.${name};`);
 		});
 
 		source.push('//---START---', '');
@@ -35,9 +35,8 @@ export default {
 		source.push(artifact.after || '', '');
 		source.push('//---END---', '');
 
-		source.push(`  return ${artifact.export}`);
-		source.push('}');
+		source.push(`return ${artifact.export}`);
 
-		return source.join('\n');
+		return <any>Function('__SCOPE__', source.join('\n'));
 	}
 };

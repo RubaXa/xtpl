@@ -15,7 +15,7 @@ interface Node {
 
 export default (options) => (node:Bone) => {
 	let varNum = 0;
-	let maxVarNum = 0;
+	let maxVarNum = 1;
 	const staticFragments = [];
 
 	function processing(node:Bone) {
