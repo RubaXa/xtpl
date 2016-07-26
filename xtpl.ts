@@ -25,7 +25,7 @@ export default {
 		const source = ['__SCOPE__ = __SCOPE__ || {};'];
 		const artifact = options.mode(fragment);
 
-		options.scope.forEach(name => {
+		options.scope && options.scope.forEach(name => {
 			source.push(`var ${name} = __SCOPE__.${name};`);
 		});
 

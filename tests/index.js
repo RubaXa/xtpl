@@ -23,7 +23,7 @@ define([
 		assert.equal(frag.first.length, 2);
 	})
 
-	QUnit.test('string/prettify', function (assert) {
+	QUnit.test('string', function (assert) {
 		const template = xtpl.compile(frag, {mode: stringMode()});
 		const templatePrettify = xtpl.compile(frag, {mode: stringMode({prettify: true})});
 		const expected = [
@@ -38,7 +38,7 @@ define([
 		];
 
 		assert.equal(typeof template, 'function')
-		assert.deepEqual(template(), expected.map(line => line.trim().join('')));
+		assert.deepEqual(template(), expected.map(line => line.trim()).join(''));
 		assert.deepEqual(templatePrettify(), expected.join('\n'), 'prettify');
 	});
 });
