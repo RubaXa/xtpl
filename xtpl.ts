@@ -3,13 +3,10 @@ import xtplParser from 'skeletik/preset/xtpl';
 
 export interface XCompileOptions {
 	mode:any;
-	scope:string[];
+	scope?:string[];
 }
 
 export type template<T> = (__SCOPE__:any) => T;
-
-const MODE = {
-};
 
 export default {
 	parse(input:string):Bone {
@@ -27,6 +24,10 @@ export default {
 
 		options.scope && options.scope.forEach(name => {
 			source.push(`var ${name} = __SCOPE__.${name};`);
+		});
+
+		Object.keys(artifact.utils || {}).forEach((name:string) => {
+			source.push(`var ${name} = ${artifact.utils[name].toString()};`);
 		});
 
 		source.push('//---START---', '');

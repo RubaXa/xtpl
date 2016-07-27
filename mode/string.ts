@@ -1,5 +1,7 @@
+import {Bone} from 'skeletik';
 import xtplParser, {DTD_TYPE, COMMENT_TYPE, TEXT_TYPE, KEYWORD_TYPE, HIDDEN_CLASS_TYPE} from 'skeletik/preset/xtpl';
 import {compile as compileKeyword} from '../src/keywords';
+import {interpolate} from '../src/utils';
 
 const _s = JSON.stringify;
 
@@ -8,12 +10,18 @@ const SHORT = {
 	input: 1, keygen: 1, link: 1, meta: 1, param: 1, source: 1, wbr: 1
 };
 
-export default (options:any = {}) => (node) => {
+export interface StringModeOptions {
+	prettify?:boolean;
+}
+
+export default (options:StringModeOptions = {}) => (node:Bone) => {
 	const {prettify} = options;
 	const NL = prettify ? '\n' : '';
 
-	function push(value) {
-		return value ? `__ROOT += ${_s(value)};\n` : value;
+	function push(value:string, interpolateValue?:boolean) {
+		let newValue = _s(value);
+		interpolateValue && (newValue = interpolate(newValue));
+		return value ? `__ROOT += ${newValue};\n` : value;
 	}
 
 	function compile(node, pad:string) {
@@ -28,8 +36,8 @@ export default (options:any = {}) => (node) => {
 		if (type === 'dtd') {
 			code = push(`<!DOCTYPE ${raw.value}>${NL}`);
 		} else {
-			var hasText = false;
-			var content = node.nodes.map(function (child) {
+			let hasText = false;
+			let content = node.nodes.map(function (child) {
 				hasText = child.type === 'text' || hasText;
 				return compile(child, type == '#root' ? '' : pad + '  ');
 			}).join('');
@@ -46,21 +54,24 @@ export default (options:any = {}) => (node) => {
 				const pair = compileKeyword(raw.name, raw.attrs);
 				return pair[0] + content + pair[1];
 			} else if (TEXT_TYPE === type) {
-				code = push(raw.value);
+				code = push(raw.value, true);
 			} else if (COMMENT_TYPE === type) {
 				code = push(`${pad}<!--${raw.value}-->${NL}`);
 			} else if (HIDDEN_CLASS_TYPE === type) {
 				return content + NL;
 			} else {
 				const name = raw.name;
-				const attrs = Object.keys(raw.attrs || {}).map(name => ` ${name}="${raw.attrs[name]}"`).join('');
+				const attrs = Object
+								.keys(raw.attrs || {})
+								.map(name => ` ${name}="${raw.attrs[name]}"`)
+								.join('');
 
 				code = `${pad}<${name}${attrs}`;
 
 				if (SHORT[name]) {
-					code = push(`${code}/>${NL}`);
+					code = push(`${code}/>${NL}`, true);
 				} else {
-					code = push(code + '>') + content + push(`</${name}>${NL}`);
+					code = push(code + '>', true) + content + push(`</${name}>${NL}`);
 				}
 			}
 		}
@@ -80,6 +91,21 @@ export default (options:any = {}) => (node) => {
 	}
 
 	return {
+		utils: {
+			EACH: function EACH(data:any, callback:Function) {
+				if (data != null) {
+					if (data.forEach) {
+						data.forEach(callback);
+					} else {
+						for (var key in data) {
+							if (data.hasOwnProperty(key)) {
+								callback(data[key], key);
+							}
+						}
+					}
+				}
+			}
+		},
 		before: 'var __ROOT = "";',
 		code: clean(compile(node, '')),
 		export: '__ROOT.trim()',

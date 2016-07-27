@@ -1,8 +1,10 @@
 import {Bone} from 'skeletik';
-import xtplParser, {DTD_TYPE, COMMENT_TYPE, TEXT_TYPE, KEYWORD_TYPE, TAG_TYPE} from 'skeletik/preset/xtpl';
+import xtplParser, {ROOT_TYPE, DTD_TYPE, COMMENT_TYPE, TEXT_TYPE, KEYWORD_TYPE, TAG_TYPE} from 'skeletik/preset/xtpl';
 import {compile as compileKeyword} from '../src/keywords';
+import {interpolate} from '../src/utils';
 
 const _s = JSON.stringify;
+const ROOT = '__ROOT';
 
 interface Node {
 	type:string;
@@ -13,19 +15,23 @@ interface Node {
 	computed:boolean;
 }
 
-export default (options) => (node:Bone) => {
+export interface JSONModeOptions {
+	debug?:boolean;
+}
+
+export default (options:JSONModeOptions = {}) => (node:Bone) => {
 	let varNum = 0;
 	let maxVarNum = 1;
 	const staticFragments = [];
 
-	function processing(node:Bone) {
+	function processing(node:Bone):Node {
 		const raw = node.raw || {};
 		const type = node.type;
 		const nodes = node.nodes;
 		const name = raw.name;
 		const attrs = raw.attrs;
 
-		let computed = type === KEYWORD_TYPE;
+		let computed = (type === KEYWORD_TYPE || type === ROOT_TYPE);
 		const children = nodes.map(node => {
 			const child = processing(node);
 			computed = computed || child.computed;
@@ -42,7 +48,7 @@ export default (options) => (node:Bone) => {
 		};
 	}
 
-	function compile(pad:string, node:Node, rootVar?, isStatic?) {
+	function compile(pad:string, node:Node, rootVar?:string, isStatic?:boolean):string {
 		const {type, name, value, attrs, children, computed} = node;
 		let code;
 
@@ -58,7 +64,7 @@ export default (options) => (node:Bone) => {
 			code = `${pad}${pair[0]}\n`;
 
 			children.forEach(child => {
-				const res = compile(pad + '  ', child, rootVar);
+				const res = compile(`${pad}  `, child, rootVar);
 
 				if (child.computed) {
 					flush();
@@ -71,12 +77,17 @@ export default (options) => (node:Bone) => {
 			flush();
 			code += `${pad}${pair[1]}\n`;
 		} else if (type === TEXT_TYPE) {
-			code = _s(value);
+			code = interpolate(_s(value));
 		} else if (type === COMMENT_TYPE) {
 			code = `{tag: "!", children: ${_s(value)} }`;
 		} else {
 			const length = children.length;
-			code = `{tag: ${_s(name)}`;
+			const attrsStr = Object
+								.keys(attrs || {})
+								.map(name => `${_s(name)}: ${interpolate(_s(attrs[name]))}`)
+								.join(', ');
+
+			code = `{tag: ${_s(name)}${attrsStr ? `, attrs: {${attrsStr}}` : ''}`;
 
 			if (length === 1 && children[0].type === TEXT_TYPE) {
 				code += `, children: ${compile('', children[0])}}`;
@@ -118,7 +129,11 @@ export default (options) => (node:Bone) => {
 			}
 
 			if (!computed && !isStatic) {
-				return `__S${staticFragments.push(code)}`;
+				code = `__S${staticFragments.push(code)}`;
+				
+				if (rootVar === ROOT) {
+					code = `${pad}${rootVar}.children.push(${code})\n`;
+				}
 			}
 		}
 
@@ -128,12 +143,27 @@ export default (options) => (node:Bone) => {
 	const code = compile('', processing(node), '__ROOT').trim();
 
 	return {
+		utils: {
+			EACH: function EACH(data:any, callback:Function) {
+				if (data != null) {
+					if (data.forEach) {
+						data.forEach(callback);
+					} else {
+						for (var key in data) {
+							if (data.hasOwnProperty(key)) {
+								callback(data[key], key);
+							}
+						}
+					}
+				}
+			}
+		},
 		before: 'var ' + [
 			'__ROOT = {children:[]}',
 			Array.apply(null, Array(maxVarNum)).map((_, i) => `__V${i}`).join(', '),
 			staticFragments.map((code, i) => `__S${i+1} = ${code}`).join(',\n')
 		].join(','),
 		code,
-		export: '__ROOT'
+		export: '__ROOT.children[0]'
 	};
 };
