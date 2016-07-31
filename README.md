@@ -2,6 +2,22 @@ xtpl
 ----
 Template Engine with CSS-JS-like syntaxis.
 
+### API
+
+```js
+import xtpl from 'xtpl';
+import stringMode from 'xtpl/mode/string';
+
+const template = `form#main.login[action="/api/login/"] > input[name="name"][placeholder="{attrs.name}"]`;
+const fragment = xtpl.parse(template);
+const compiledTemplate = xtpl.compile(fragment, {
+	mode: stringMode({prettify: true}),
+	scope: ['attrs']
+});
+
+compile({attrs: {name: '%username%'}});
+```
+
 ### Example
 
 ##### index.tpl
