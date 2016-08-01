@@ -27,53 +27,78 @@ import "page"
 // Use custom elemnt from "page.xtpl"
 page[title="Welcome"]
 	// Override `dynamic` part
-	content()
+	content = ()
 		h1.title | xtpl — Template Engine
-		super() // Call parent method
+		super // Call parent method
 ```
 
 ##### page.xtpl
 ```xtpl
 import "btn"
 
-page = ({title})
+page = [title]
 	html
 		head > title | {title || "Default title"}
 		body
-			// Call `dynamic` part
-			content()
+			// Define `dynamic` part
+			content = ()
 				// Default content
 				btn[iconName="github"][text="Download"][href="..."]
+
+			// Call `dynamic` part
+			content()
 ```
 
 ##### btn.xtpl
 ```xtpl
 import "icon"
 
-btn = ({text, iconName, href})
+btn = [text, iconName, href]
 	${href ? "a" : "button"}.btn[href="{href}"] > icon[name="{iconName}"] + &__text | {text}
 ```
 
 ##### icon.xtpl
 ```xtpl
-icon = (name)
+icon = [name]
 	i.fa-icon
 		class.fa-{name}: true
 ```
 
 ---
 
-```xtpl
-// Define
-layout = ()
-	.layout
-		.&_left > left(this.attrs.size)
-		.&_middle > middle(this.attrs)
-		.&_right > right(this.attrs)
+### Define dynamic part
+
+```
+custom-element = [attrName]
+	if (typeof foo !== "undefined") {
+		foo(true)
+	} else {
+		// ...
+	}
+
+	bar(Date.now())
+
+	qux = (text)
+		| {text}
+
+	qux(attrName)
 
 // Usage
-layout
-	left(attrs)
-		btn[big="{attrs.size === super.XXL_SIZE}"][text="Compose"]
-	// and etc
+custom-element[attrName="rubaxa"]
+	// Override
+	qux = (name)
+		h1.title > super.qux(name) + | !
+```
+
+---
+
+### Class name
+
+```
+cbx = [checked]
+	.checkbox
+		class.is-checked: checked
+		.&__checkmark
+
+cbx[checked] // <div class="checkbox is-checked"><div class="checkbox__checkmark"></div></div>
 ```
