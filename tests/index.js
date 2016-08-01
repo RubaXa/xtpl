@@ -65,4 +65,18 @@ define([
 			}
 		});
 	});
+
+	QUnit.test('if / string', function (assert) {
+		const template = xtpl.fromString('foo\nif (x)\n  bar', {mode: stringMode(), scope: ['x']});
+
+		assert.equal(template({x: false}), '<foo></foo>');
+		assert.equal(template({x: true}), '<foo></foo><bar></bar>');
+	});
+
+	QUnit.test('if / json', function (assert) {
+		const template = xtpl.fromString('foo\nif (x)\n  bar', {mode: jsonMode(), scope: ['x']});
+
+		assert.deepEqual(template({x: false}), {tag: undefined, children: [{tag: 'foo'}]});
+		assert.deepEqual(template({x: true}), {tag: undefined, children: [{tag: 'foo'}, {tag: 'bar'}]});
+	});
 });

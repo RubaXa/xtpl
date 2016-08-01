@@ -39,5 +39,12 @@ export default {
 		source.push(`return ${artifact.export}`);
 
 		return <any>Function('__SCOPE__', source.join('\n'));
+	},
+
+	fromString(input:string, options:XCompileOptions) {
+		const fragment = this.parse(input);
+		const template = this.compile(fragment, options);
+		
+		return template;
 	}
 };
