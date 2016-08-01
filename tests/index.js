@@ -41,4 +41,28 @@ define([
 		assert.deepEqual(template(), expected.map(line => line.trim()).join(''));
 		assert.deepEqual(templatePrettify(), expected.join('\n'), 'prettify');
 	});
+
+	QUnit.test('json', function (assert) {
+		const template = xtpl.compile(frag, {mode: jsonMode()});
+
+		assert.equal(typeof template, 'function')
+		assert.deepEqual(template(), {
+			tag: undefined,
+			children: {
+				tag: "html",
+				children: [
+					{
+						tag: "head",
+						children: {tag: "title", children: "foo"}
+					}, {
+						tag: "body",
+						children: {
+							tag: "h1",
+							children: "Bar"
+						}
+					}
+				]
+			}
+		});
+	});
 });
