@@ -79,4 +79,25 @@ define([
 		assert.deepEqual(template({x: false}), {tag: undefined, children: [{tag: 'foo'}]});
 		assert.deepEqual(template({x: true}), {tag: undefined, children: [{tag: 'foo'}, {tag: 'bar'}]});
 	});
+
+	QUnit.test('foo = [value] / string', function (assert) {
+		// todo: #root-error
+		const template = xtpl.fromString([
+			'foo = [value]',
+			'  b | {value}',
+			'foo[value="1"] + foo[value="x"] + foo[value="{a + b}"] + foo[value="a*b={a * b}"]'
+		].join('\n'), {mode: stringMode(), scope: ['a', 'b']});
+
+		console.log(template.toString());
+		
+		assert.equal(
+			template({a: 3, b: 2}),
+			[
+				'<b>1</b>',
+				'<b>x</b>',
+				'<b>5</b>',
+				'<b>a*b=6</b>',
+			].join('')
+		);
+	});
 });

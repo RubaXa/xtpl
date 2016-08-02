@@ -69,25 +69,34 @@ icon = [name]
 ### Define dynamic part
 
 ```
+// Register custom element
 custom-element = [attrName]
+	// Checking existence of `foo`
 	if (typeof foo !== "undefined") {
-		foo(true)
+		.head > foo(true)
 	} else {
-		// ...
+		.head | foo — not exists
 	}
 
-	bar(Date.now())
+	// Call undefined `bar`
+	h1 > bar(Date.now())
 
+	// Define `qux`
 	qux = (text)
 		| {text}
 
+	// Call `qux` with arguments
 	qux(attrName)
 
 // Usage
 custom-element[attrName="rubaxa"]
-	// Override
+	// Override `bar`
+	bar = (time)
+		| Now {time | date}
+
+	// Override & inherit `qux`
 	qux = (name)
-		h1.title > super.qux(name) + | !
+		h2.title > icon[name="wow"] + super.qux(name)
 ```
 
 ---

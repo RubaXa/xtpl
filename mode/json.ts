@@ -31,7 +31,8 @@ export default (options:JSONModeOptions = {}) => (node:Bone) => {
 		const name = raw.name;
 		const attrs = raw.attrs;
 
-		let computed = (type === KEYWORD_TYPE || type === ROOT_TYPE);
+		let computed = (type === KEYWORD_TYPE);
+
 		const children = nodes.map(node => {
 			const child = processing(node);
 			computed = computed || child.computed;

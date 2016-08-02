@@ -1,7 +1,16 @@
 import {Bone} from 'skeletik';
-import xtplParser, {DTD_TYPE, COMMENT_TYPE, TEXT_TYPE, KEYWORD_TYPE, HIDDEN_CLASS_TYPE} from 'skeletik/preset/xtpl';
+import xtplParser from 'skeletik/preset/xtpl';
+import {
+	DTD_TYPE,
+	COMMENT_TYPE,
+	TEXT_TYPE,
+	KEYWORD_TYPE,
+	HIDDEN_CLASS_TYPE,
+	DEFINE_TYPE,
+	CALL_TYPE
+} from 'skeletik/preset/xtpl';
 import {compile as compileKeyword} from '../src/keywords';
-import {interpolate} from '../src/utils';
+import {interpolate, stringifyObjectKey, stringifyObjectValue} from '../src/utils';
 
 const _s = JSON.stringify;
 
@@ -17,6 +26,7 @@ export interface StringModeOptions {
 export default (options:StringModeOptions = {}) => (node:Bone) => {
 	const {prettify} = options;
 	const NL = prettify ? '\n' : '';
+	const CUSTOM_ELEMENTS = {};
 
 	function push(value:string, interpolateValue?:boolean) {
 		let newValue = _s(value);
@@ -52,15 +62,27 @@ export default (options:StringModeOptions = {}) => (node:Bone) => {
 				code = content;
 			} else if (KEYWORD_TYPE === type) {
 				const pair = compileKeyword(raw.name, raw.attrs);
-				return pair[0] + content + pair[1];
+				code = pair[0] + content + pair[1];
+			} else if (DEFINE_TYPE === type) {
+				const {name} = raw;
+				const attrsToVars = raw.attrs.map(name => `  var ${name} = attrs.${name}`).join('\n');
+				
+				CUSTOM_ELEMENTS[name] = 1;
+				code = `${pad}function ${name}(attrs) {\n${attrsToVars}\n  ${content}}\n`;
 			} else if (TEXT_TYPE === type) {
 				code = push(raw.value, true);
 			} else if (COMMENT_TYPE === type) {
 				code = push(`${pad}<!--${raw.value}-->${NL}`);
 			} else if (HIDDEN_CLASS_TYPE === type) {
-				return content + NL;
+				code = content + NL;
+			} else if (CUSTOM_ELEMENTS[raw.name]) {
+				const attrsStr = Object
+								.keys(raw.attrs || {})
+								.map(name => `${stringifyObjectKey(name)}: ${stringifyObjectValue(raw.attrs[name])}`)
+								.join(', ');
+				code = `${pad}${raw.name}({` + attrsStr + '});\n';
 			} else {
-				const name = raw.name;
+				const {name} = raw;
 				const attrs = Object
 								.keys(raw.attrs || {})
 								.map(name => ` ${name}="${raw.attrs[name]}"`)
@@ -87,7 +109,7 @@ export default (options:StringModeOptions = {}) => (node:Bone) => {
 			content = content.replace(/(__ROOT \+= ".*?)";\n*__ROOT \+= "/g, '$1');
 		} while (prev !== content);
 
-		return content;
+		return content.replace(/ \+ ""/g, '');
 	}
 
 	return {

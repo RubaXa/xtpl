@@ -30,11 +30,9 @@ export default {
 			source.push(`var ${name} = ${artifact.utils[name].toString()};`);
 		});
 
-		source.push('//---START---', '');
 		source.push(artifact.before || '', '');
-		source.push(artifact.code || '', '');
-		source.push(artifact.after || '', '');
-		source.push('//---END---', '');
+		source.push(artifact.code || '');
+		artifact.after && source.push(artifact.after);
 
 		source.push(`return ${artifact.export}`);
 
