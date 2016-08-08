@@ -2,6 +2,123 @@ xtpl
 ----
 Template Engine with CSS-JS-like syntaxis.
 
+- `img` => `{tag: "img"}`
+- `b | foo` => `{tag: "img", children: "foo"}`
+- `b + i` => `[{tag: "b"}, {tag: "i"}]`
+- `b > i` => `{tag: "b", children: {tag: "i"}}`
+- `.foo` => `{tag: "div", attrs: {class: "foo"}}`
+- `i.foo` => `{tag: "i", attrs: {class: "foo"}}`
+- `i[class="foo"]` => `{tag: "i", attrs: {class: "foo"}}`
+
+
+### AST
+
+```ts
+type ComplexValue = Array<string|INode>;
+
+interface INode {
+	type:string;
+	raw:INodeRaw;
+}
+
+interface INodeRaw {
+	name?:string|ComplexValue;
+	value?:string|ComplexValue;
+	attrs?:INodeRawAttrs;
+}
+
+interface INodeRawAttrs {
+	id?:string|ComplexValue;
+	class?:ComplexValue[];
+	style?:ComplexValue[];
+	data?:ComplexValue[];
+	[any:string]:string|ComplexValue;
+}
+```
+
+
+
+```
+form-`isRadio ? 'radio' : 'checked'`-element.&__`prefix`-`postfix`[inline="{value}"]
+	class.&_selected_`x ? 'yes' : 'no'`: active === model.id
+
+form-${isRadio ? 'radio' : 'checked'}-element.&__${prefix}-${postfix}[inline="${value}"]
+	class.&_selected_${x ? 'yes' : 'no'}: active === model.id
+	
+	h2 | Hi, {username}! 
+---
+{
+	type: "node",
+	name: [
+		"form-",
+		{
+			type: "expression",
+			value: "isRadio ? 'radio' : 'checked'"
+		},
+		"-element"
+	],
+	attrs: {
+		class: [
+			[
+				{type: "inherit", mode: "parent"},
+				"__",
+				{
+					type: "expression",
+					value: "prefix"
+				},
+				"-",
+				{
+					type: "expression",
+					value: "postfix"
+				},
+			],
+			[
+				{type: "inherit", mode: "self"},
+				"_selected_",
+				{
+					type: "expression",
+					test: "active === model.id"
+					value: "x ? 'yes' : 'no'"
+				}
+			]
+		]
+	},
+	nodes: [
+		{
+			type: "text",
+			value: [
+				"Hi, ",
+				{
+					type: "expression",
+					value: "username"
+				},
+				"!"
+			]
+		}
+	]
+}
+```
+
+
+### Logic
+
+Основные литеры:
+ / <- начало комментария
+   - // ...
+   - /* ... */
+ ! <- объявление doctype
+   - !html
+ $ <- объявление переменной или выражения
+   - $foo = ...
+   - ${ foo.toString() }
+ | <- текст
+   - | foo!
+ # <- id элемента
+   - #foo
+ . <- имя css-класса
+   - .foo.bar
+
+
 ### API
 
 ```js
@@ -54,7 +171,7 @@ page = [title]
 import "icon"
 
 btn = [text, iconName, href]
-	${href ? "a" : "button"}.btn[href="{href}"] > icon[name="{iconName}"] + &__text | {text}
+	`href ? "a" : "button"`.btn[href="{href}"] > icon[name="{iconName}"] + &__text | {text}
 ```
 
 ##### icon.xtpl
