@@ -1,5 +1,5 @@
 import {Bone} from 'skeletik';
-import xtplParser from 'skeletik/preset/xtpl';
+import xtplParser from './syntax/xtpl';
 
 export interface XCompileOptions {
 	mode:any;

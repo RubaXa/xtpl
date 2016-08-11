@@ -22,14 +22,18 @@
 				location: '../dist',
 				main: 'xtpl.js'
 			}],
+
 			paths: {
 				'qunit': '/js/qunit/qunit-1.19.0',
 			}
 		});
 
 		require(['qunit'].concat([
-			'./index'
+			'./expression.tests',
+			'./xml.tests',
+			'./xtpl.tests',
 		]), function (QUnit) {
+			QUnit.dump.maxDepth = 10;
 			QUnit.start();
 		});
 	</script>

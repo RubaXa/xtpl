@@ -1,5 +1,5 @@
 import {Bone} from 'skeletik';
-import xtplParser from 'skeletik/preset/xtpl';
+import xtplParser from '../syntax/xtpl';
 import {
 	DTD_TYPE,
 	COMMENT_TYPE,
@@ -8,7 +8,7 @@ import {
 	HIDDEN_CLASS_TYPE,
 	DEFINE_TYPE,
 	CALL_TYPE
-} from 'skeletik/preset/xtpl';
+} from '../syntax/utils';
 import {compile as compileKeyword} from '../src/keywords';
 import {interpolate, stringifyObjectKey, stringifyObjectValue} from '../src/utils';
 

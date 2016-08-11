@@ -4,8 +4,17 @@
   "description": "xtpl",
   "main": "dist/xtpl.js",
   "scripts": {
-    "test": "tsc && node tests/index.js"
+    "test": "ntsc && node tests/index.js",
+	"prepublish": "ntsc"
   },
+  "files": [
+    "README.md",
+    "dist/",
+    "mode/",
+    "src/",
+    "syntax/",
+    "xtpl.ts"
+  ],
   "repository": {
     "type": "git",
     "url": "git+https://github.com/RubaXa/xtpl.git"
@@ -20,6 +29,6 @@
   },
   "homepage": "https://github.com/RubaXa/xtpl#readme",
   "devDependencies": {
-    "skeletik": "^0.1.0"
+    "skeletik": "^0.3.0"
   }
 }
