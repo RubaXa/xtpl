@@ -1,7 +1,7 @@
 define(['qunit', 'xtpl/syntax/expression'], function (QUnit, expressionParser) {
 	'use strict';
 
-	QUnit.module('syntax: expression');
+	QUnit.module('xtpl / syntax / expression');
 
 	expressionParser = expressionParser['default'];
 

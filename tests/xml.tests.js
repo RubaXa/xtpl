@@ -1,7 +1,7 @@
 define(['qunit', 'xtpl/syntax/xml', './qunit.assert.fragEqual'], function (QUnit, xmlParser) {
 	'use strict';
 
-	QUnit.module('syntax: xml');
+	QUnit.module('xtpl / syntax / xml');
 
 	xmlParser = xmlParser['default'];
 

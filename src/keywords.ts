@@ -1,6 +1,5 @@
 import {Bone} from 'skeletik';
 import {keywords as parserKeywords} from '../syntax/xtpl';
-import {interpolate} from './utils';
 
 export type jscode = [string, string];
 

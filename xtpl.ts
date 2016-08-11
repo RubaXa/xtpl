@@ -35,6 +35,7 @@ export default {
 		artifact.after && source.push(artifact.after);
 
 		source.push(`return ${artifact.export}`);
+		console.log(source.join('\n'));
 
 		return <any>Function('__SCOPE__', source.join('\n'));
 	},
