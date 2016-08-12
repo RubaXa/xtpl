@@ -22,7 +22,7 @@ export function stringify(values, bone) {
 		if (INHERIT_TYPE === values.type) {
 			while (bone = bone.parent) {
 				if (bone.raw.attrs.class) {
-					value = stringify(bone.raw.attrs.class[0]);
+					value = stringify(bone.raw.attrs.class[0], bone);
 					break;
 				}
 			}

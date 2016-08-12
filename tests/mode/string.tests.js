@@ -63,6 +63,13 @@ define([
 		assert.equal(template({x: 'ico'}), '<div class=\"ico\"><div class=\"ico__text\"></div></div>');
 	});
 
+	QUnit.test('nesting + hidden_class', function (assert) {
+		const template = xtpl.fromString('.foo > %-bar > .&__ico + .&__txt', {mode: stringMode()});
+		
+		assert.codeEqual(template, 'var __ROOT = \"<div class=\\\"foo\\\"><div class=\\\"foo-bar__ico\\\"></div><div class=\\\"foo-bar__txt\\\"></div></div>\";');
+		assert.equal(template({x: 'ico'}), '<div class=\"foo\"><div class=\"foo-bar__ico\"></div><div class=\"foo-bar__txt\"></div></div>');
+	});
+
 	// QUnit.test('keyworkds', function (assert) {
 	// 	const template = xtpl.fromString('foo\nif (x)\n  bar', {mode: stringMode(), scope: ['x']});
 
