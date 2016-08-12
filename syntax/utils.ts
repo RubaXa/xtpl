@@ -15,6 +15,7 @@ export const CALL_TYPE = 'call';
 export const EXPRESSION_TYPE = 'expression';
 export const GROUP_TYPE = 'group';
 export const CDATA_TYPE = 'cdata';
+export const INHERIT_TYPE = 'inherit';
 
 // Codes
 export const ENTER_CODE = 10; // "\n"

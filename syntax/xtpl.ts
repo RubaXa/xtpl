@@ -217,7 +217,7 @@ function closeGroup(lex:Lexer, bone:Bone):Bone {
 }
 
 function inheritEntryHandle(returns?:boolean) {
-	let retVal:any = {type: 'inherit', raw: this};
+	let retVal:any = {type: utils.INHERIT_TYPE, raw: this};
 	
 	if (returns !== true) {
 		attrValueChain.push(retVal);

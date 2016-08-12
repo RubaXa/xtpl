@@ -31,11 +31,11 @@ export default (options:StringModeOptions = {}) => (node:Bone) => {
 		return `__ROOT += ${raw ? value : stringify(value)};\n`;
 	}
 
-	function pushAttr(name, values):string {
-		let value = stringifyAttr(name, values);
+	function pushAttr(name, values, bone):string {
+		let value = stringifyAttr(name, values, bone);
 
-		value = (value.charCodeAt(0) === QUOTE_CODE) ? `"\\${value}` : `'\\"' + ${value}`;
-		value = (value.charCodeAt(value.length - 1) === QUOTE_CODE) ? `${value.slice(0, -1)}\\""` : `${value} + '\\"'`;
+		value = (value.charCodeAt(0) === QUOTE_CODE) ? `"\\${value}` : `"\\"" + ${value}`;
+		value = (value.charCodeAt(value.length - 1) === QUOTE_CODE) ? `${value.slice(0, -1)}\\""` : `${value} + "\\""`;
 
 		return push(value, true);
 	}
@@ -93,7 +93,7 @@ export default (options:StringModeOptions = {}) => (node:Bone) => {
 				const {name} = raw;
 				const attrsStr = Object
 								.keys(raw.attrs || {})
-								.map(name => push(` ${name}=`) + pushAttr(name, raw.attrs[name]))
+								.map(name => push(` ${name}=`) + pushAttr(name, raw.attrs[name], node))
 								.join('');
 
 				code = push(`${pad}<`) + push(name) + attrsStr;
@@ -122,25 +122,11 @@ export default (options:StringModeOptions = {}) => (node:Bone) => {
 			.replace(/(__ROOT )\+=/, '$1=')
 			.replace(/ = "\\n/, ' = "')
 			.replace(/\\n";\n$/, '";')
+			.trim()
 		;
 	}
 
 	return {
-		// utils: {
-		// 	EACH: function EACH(data:any, callback:Function) {
-		// 		if (data != null) {
-		// 			if (data.forEach) {
-		// 				data.forEach(callback);
-		// 			} else {
-		// 				for (var key in data) {
-		// 					if (data.hasOwnProperty(key)) {
-		// 						callback(data[key], key);
-		// 					}
-		// 				}
-		// 			}
-		// 		}
-		// 	}
-		// },
 		before: '',
 		code: 'var ' + clean(compile(node, '')),
 		export: '__ROOT',

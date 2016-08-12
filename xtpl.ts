@@ -31,10 +31,12 @@ export default {
 		});
 
 		source.push(artifact.before || '', '');
-		source.push(artifact.code || '');
+		source.push('// CODE:START', artifact.code || '', '// CODE:END');
 		artifact.after && source.push(artifact.after);
 
 		source.push(`return ${artifact.export}`);
+		
+		// Debug
 		console.log(source.join('\n'));
 
 		return <any>Function('__SCOPE__', source.join('\n'));
