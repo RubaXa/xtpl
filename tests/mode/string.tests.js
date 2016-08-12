@@ -67,7 +67,17 @@ define([
 		const template = xtpl.fromString('.foo > %-bar > .&__ico + .&__txt', {mode: stringMode()});
 		
 		assert.codeEqual(template, 'var __ROOT = \"<div class=\\\"foo\\\"><div class=\\\"foo-bar__ico\\\"></div><div class=\\\"foo-bar__txt\\\"></div></div>\";');
-		assert.equal(template({x: 'ico'}), '<div class=\"foo\"><div class=\"foo-bar__ico\"></div><div class=\"foo-bar__txt\"></div></div>');
+		assert.equal(template(), '<div class=\"foo\"><div class=\"foo-bar__ico\"></div><div class=\"foo-bar__txt\"></div></div>');
+	});
+
+	QUnit.test('self nesting', function (assert) {
+		const template = xtpl.fromString('.foo\n  class.&_small: true', {mode: stringMode()});
+		assert.equal(template(), '<div class=\"foo foo_small\"></div>');
+	});
+
+	QUnit.test('self nesting + interpolate', function (assert) {
+		const template = xtpl.fromString('.foo\n  class.&_${mode}: true', {mode: stringMode(), scope: ['mode']});
+		assert.equal(template({mode: 'bar'}), '<div class=\"foo foo_bar\"></div>');
 	});
 
 	// QUnit.test('keyworkds', function (assert) {

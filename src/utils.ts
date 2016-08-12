@@ -1,5 +1,5 @@
 import {Bone} from 'skeletik';
-import {EXPRESSION_TYPE, INHERIT_TYPE} from '../syntax/utils';
+import {EXPRESSION_TYPE, INHERIT_TYPE, GROUP_TYPE} from '../syntax/utils';
 
 const R_QUOTE_START = /^"/;
 const R_QUOTE_END = /"$/;
@@ -19,32 +19,50 @@ export function stringify(values, bone) {
 	let value = values;
 
 	if (values != null) {
-		if (INHERIT_TYPE === values.type) {
-			while (bone = bone.parent) {
-				if (bone.raw.attrs.class) {
-					value = stringify(bone.raw.attrs.class[0], bone);
-					break;
-				}
-			}
-		} else if (EXPRESSION_TYPE === values.type) {
-			value = `(${values.raw})`;
-		} else if (values === true || typeof values === 'string') {
-			value = jsonStringify(values);
-		} else {
-			const length = values.length;
-			value = stringify(values[0], bone);
+		switch (values.type) {
+			case GROUP_TYPE:
+				value = `(${values.test} ? ${stringify(values.raw, bone)} : "")`; 
+				break;
 
-			if (length > 1) {
-				for (let i = 1; i < length; i++) {
-					const nextValue = stringify(values[i], bone);
-					
-					if (R_QUOTE_END.test(value) && R_QUOTE_START.test(nextValue)) {
-						value = value.slice(0, -1) + nextValue.slice(1);
-					} else {
-						value += ' + ' + nextValue;
+			case INHERIT_TYPE:
+				const selfMode = values.raw === 'self';
+
+				do {
+					!selfMode && (bone = bone.parent);
+
+					if (bone.raw.attrs.class) {
+						value = stringify(bone.raw.attrs.class[0], bone);
+						break;
+					}
+
+					selfMode && (bone = bone.parent);
+				} while (1);
+				break;
+
+			case EXPRESSION_TYPE:
+				value = `(${values.raw})`;
+				break;
+		
+			default:
+				if (values === true || typeof values === 'string') {
+					value = jsonStringify(values);
+				} else {
+					const length = values.length;
+					value = stringify(values[0], bone);
+
+					if (length > 1) {
+						for (let i = 1; i < length; i++) {
+							const nextValue = stringify(values[i], bone);
+							
+							if (R_QUOTE_END.test(value) && R_QUOTE_START.test(nextValue)) {
+								value = value.slice(0, -1) + nextValue.slice(1);
+							} else {
+								value += ' + ' + nextValue;
+							}
+						}
 					}
 				}
-			}
+				break;
 		}
 	}
 
