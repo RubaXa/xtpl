@@ -79,10 +79,26 @@ define([
 		assert.equal(template({mode: 'bar'}), '<div class=\"foo foo_bar\"></div>');
 	});
 
-	// QUnit.test('keyworkds', function (assert) {
-	// 	const template = xtpl.fromString('foo\nif (x)\n  bar', {mode: stringMode(), scope: ['x']});
+	QUnit.test('IF statement', function (assert) {
+		const template = fromString('foo\nif (x)\n  bar', ['x']);
 
-	// 	assert.equal(template({x: false}), '<foo></foo>');
-	// 	assert.equal(template({x: true}), '<foo></foo><bar></bar>');
-	// });
+		assert.equal(template({}), '<foo></foo>');
+		assert.equal(template({x: false}), '<foo></foo>');
+		assert.equal(template({x: true}), '<foo></foo><bar></bar>');
+	});
+
+	QUnit.test('IF/ELSE statement', function (assert) {
+		const template = fromString('if (x)\n  a\nelse\n  b', ['x']);
+
+		assert.equal(template({x: true}), '<a></a>');
+		assert.equal(template({x: false}), '<b></b>');
+	});
+
+	QUnit.test('IF/ELSE IF/ELSE statement', function (assert) {
+		const template = fromString('if (x == 1)\n  a\nelse if (x == 2)\n  b\nelse\n  c', ['x']);
+
+		assert.equal(template({x: 1}), '<a></a>');
+		assert.equal(template({x: 2}), '<b></b>');
+		assert.equal(template({}), '<c></c>');
+	});
 });

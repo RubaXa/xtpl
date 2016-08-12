@@ -21,3 +21,7 @@ export function register(name:string, details:string|string[], convertTo:(attrs:
 export function compile(name:string, attrs:any):jscode {
 	return keywords[name](attrs);
 }
+
+keywords['if'] = ({test}) => [`if (${test}) {`, '}'];
+keywords['else'] = ({test}) => [test ? `else if (${test}) {` : 'else {', '}'];
+keywords['for'] = ({data, as, key}) => [`EACH(${data}, function EACH_ITERATOR(${as}, ${key || '$index'}) {`, '})'];
