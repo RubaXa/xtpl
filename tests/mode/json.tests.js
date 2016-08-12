@@ -78,6 +78,51 @@ define([
 		assert.ok(template() === template(), 'strict equal');
 	});
 
+	QUnit.test('.foo > .&_bar', function (assert) {
+		const template = fromString('.foo > .&_bar');
+
+		assert.deepEqual(template(), {
+			tag: undefined,
+			children: {
+				tag: 'div',
+				attrs: {class: 'foo'},
+				children: {tag: 'div', attrs: {class: 'foo_bar'}}
+			}
+		});
+		assert.ok(template() === template(), 'strict equal');
+	});
+
+	QUnit.test('.foo > %-bar > .&__qux', function (assert) {
+		const template = fromString('.foo > %-bar > .&__qux');
+
+		assert.deepEqual(template(), {
+			tag: undefined,
+			children: {
+				tag: 'div',
+				attrs: {class: 'foo'},
+				children: {
+					tag: undefined,
+					children: {tag: 'div', attrs: {class: 'foo-bar__qux'}}
+				}
+			}
+		});
+		assert.ok(template() === template(), 'strict equal');
+	});
+
+	QUnit.test('.${x} > .&_bar', function (assert) {
+		const template = fromString('.${x} > .&_bar', ['x']);
+
+		assert.deepEqual(template({x: 'WOW'}), {
+			tag: undefined,
+			children: {
+				tag: 'div',
+				attrs: {class: 'WOW'},
+				children: {tag: 'div', attrs: {class: 'WOW_bar'}}
+			}
+		});
+		assert.ok(template() !== template(), 'strict equal');
+	});
+	
 	QUnit.test('IF statement', function (assert) {
 		const template = fromString('if (x)\n  b', ['x']);
 

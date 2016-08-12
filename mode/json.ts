@@ -6,6 +6,7 @@ import {
 	TEXT_TYPE,
 	KEYWORD_TYPE,
 	TAG_TYPE,
+	HIDDEN_CLASS_TYPE,
 } from '../syntax/utils';
 import xtplParser from '../syntax/xtpl';
 import {compile as compileKeyword} from '../src/keywords';
@@ -69,7 +70,7 @@ export default (options:JSONModeOptions = {}) => (node:Bone) => {
 		const {type, name, value, attrs, attrsStr, children, computed, hasComputedAttrs} = node;
 		let code;
 
-		if (type === KEYWORD_TYPE) {
+		if (KEYWORD_TYPE === type) {
 			const pair = compileKeyword(name, attrs);
 			let staticPool = [];
 			let flush = () => {
@@ -93,14 +94,19 @@ export default (options:JSONModeOptions = {}) => (node:Bone) => {
 
 			flush();
 			code += `${pad}${pair[1]}\n`;
-		} else if (type === TEXT_TYPE) {
+		} else if (TEXT_TYPE === type) {
 			code = value;
-		} else if (type === COMMENT_TYPE) {
+		} else if (COMMENT_TYPE === type) {
 			code = `{tag: "!", children: ${stringify(value)} }`;
 		} else {
 			const length = children.length;
 
-			code = `{tag: ${name}${attrsStr ? `, attrs: {${attrsStr}}` : ''}`;
+			if (HIDDEN_CLASS_TYPE === type) {
+				// todo: Неоптимальненько! Нужно убрать это звено.
+				code = '{tag: undefined';
+			} else {
+				code = `{tag: ${name}${attrsStr ? `, attrs: {${attrsStr}}` : ''}`;
+			}
 
 			if (length === 1 && children[0].type === TEXT_TYPE) {
 				code += `, children: ${compile('', children[0])}}`;
