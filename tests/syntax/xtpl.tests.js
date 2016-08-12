@@ -1,6 +1,6 @@
 // todo: ошибки на закрытие тега + onend
 
-define(['qunit', 'xtpl/syntax/xtpl', './qunit.assert.fragEqual'], function (QUnit, xtplParser) {
+define(['qunit', 'xtpl/syntax/xtpl', '../qunit.assert.fragEqual'], function (QUnit, xtplParser) {
 	'use strict';
 
 	QUnit.module('xtpl / syntax / xtpl');

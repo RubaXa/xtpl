@@ -29,11 +29,11 @@
 		});
 
 		require(['qunit'].concat([
-			'./expression.tests',
-			'./xml.tests',
-			'./xtpl.tests',
-			'./utils.tests',
-			'./mode.string.tests',
+			'./syntax/expression.tests',
+			'./syntax/xml.tests',
+			'./syntax/xtpl.tests',
+			'./src/utils.tests',
+			'./mode/string.tests',
 		]), function (QUnit) {
 			QUnit.dump.maxDepth = 10;
 			QUnit.start();

@@ -37,7 +37,7 @@ export default {
 		source.push(`return ${artifact.export}`);
 		
 		// Debug
-		console.log(source.join('\n'));
+		// console.log(source.join('\n'));
 
 		return <any>Function('__SCOPE__', source.join('\n'));
 	},

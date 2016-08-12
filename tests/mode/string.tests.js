@@ -2,7 +2,7 @@ define([
 	'qunit',
 	'xtpl',
 	'xtpl/mode/string',
-	'./qunit.assert.codeEqual'
+	'../qunit.assert.codeEqual'
 ], function (
 	QUnit,
 	xtplModule,
