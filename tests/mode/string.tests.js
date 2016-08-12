@@ -121,4 +121,16 @@ define([
 		assert.equal(template({text: 'Wow!'}), "<button class=\"btn\" href=\"undefined\">Wow!</button>");
 		assert.equal(template({text: 'LOL!', href: 'domain.com'}), "<a class=\"btn\" href=\"domain.com\">LOL!</a>");
 	});
+
+	QUnit.test('panel = [title] + default slot', function (assert) {
+		let template = fromString([
+			'panel = [title]',
+			'  h1 | ${title}',
+			'  __default()',
+			'panel[title="Wow!"]',
+			'  p | Done',
+		].join('\n'));
+
+		assert.equal(template(), '');
+	});
 });
