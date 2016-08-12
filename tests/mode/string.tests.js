@@ -25,20 +25,20 @@ define([
 	];
 
 	function fromString(input, scope) {
-		return xtpl.fromString(input, {mode: stringMode(), scope: scope});
+		return xtpl.fromString(input, {mode: stringMode(), scope: scope})();
 	}
 
 	QUnit.module('xtpl / mode / string')
 
 	QUnit.test('page', function (assert) {
-		const template = xtpl.compile(pageFrag, {mode: stringMode()});
+		const template = xtpl.compile(pageFrag, {mode: stringMode()})();
 
 		assert.equal(typeof template, 'function')
 		assert.deepEqual(template(), pageExpected.map(line => line.trim()).join(''));
 	});
 
 	QUnit.test('page / prettify', function (assert) {
-		const templatePrettify = xtpl.compile(pageFrag, {mode: stringMode({prettify: true})});
+		const templatePrettify = xtpl.compile(pageFrag, {mode: stringMode({prettify: true})})();
 
 		assert.equal(typeof templatePrettify, 'function')
 		assert.deepEqual(templatePrettify(), pageExpected.join('\n'), 'prettify');
@@ -48,20 +48,20 @@ define([
 	QUnit.test('interpolate', function (assert) {
 		const template = fromString('h1.title-${size} | Hi, ${user}!', ['user', 'size']);
 
-		assert.codeEqual(template, 'var __ROOT = "<h1 class=\\\"title-" + (size) + "\\\">Hi, " + (user) + "!</h1>";');
+		assert.codeEqual(template, 'var __ROOT = "<h1 class=\\\"title-" + (size) + "\\\">Hi, " + (user) + "!</h1>";\nreturn __ROOT');
 		assert.deepEqual(template({user: 'xtpl', size: 'xxl'}), '<h1 class="title-xxl">Hi, xtpl!</h1>');
 		assert.deepEqual(template({user: 'X', size: 'wow'}), '<h1 class="title-wow">Hi, X!</h1>');
 	});
 
 	QUnit.test('nesting', function (assert) {
 		const template = fromString('.btn > .&__text');
-		assert.codeEqual(template, 'var __ROOT = "<div class=\\\"btn\\\"><div class=\\\"btn__text\\\"></div></div>";');
+		assert.codeEqual(template, 'var __ROOT = "<div class=\\\"btn\\\"><div class=\\\"btn__text\\\"></div></div>";\nreturn __ROOT');
 	});
 
 	QUnit.test('nesting + interpolate', function (assert) {
 		const template = fromString('.${x} > .&__text', ['x']);
 		
-		assert.codeEqual(template, 'var __ROOT = \"<div class=\\\"\" + (x) + \"\\\"><div class=\\\"\" + (x) + \"__text\\\"></div></div>\";');
+		assert.codeEqual(template, 'var __ROOT = \"<div class=\\\"\" + (x) + \"\\\"><div class=\\\"\" + (x) + \"__text\\\"></div></div>\";\nreturn __ROOT');
 		assert.equal(template({x: 'ico'}), '<div class=\"ico\"><div class=\"ico__text\"></div></div>');
 	});
 

@@ -20,18 +20,19 @@ export default {
 	},
 
 	compile<T>(fragment:Bone, options:XCompileOptions):(scope) => T {
-		const source = ['__SCOPE__ = __SCOPE__ || {};'];
+		const source = [];
 		const artifact = options.mode(fragment);
 
+		artifact.before && source.push(artifact.before);
+
+		source.push(
+			'return function compiledTemplate(__SCOPE__) {',
+			'  __SCOPE__ = __SCOPE__ || {};'
+		);
+
 		options.scope && options.scope.forEach(name => {
-			source.push(`var ${name} = __SCOPE__.${name};`);
+			source.push(`  var ${name} = __SCOPE__.${name};`);
 		});
-
-		Object.keys(artifact.utils || {}).forEach((name:string) => {
-			source.push(`var ${name} = ${artifact.utils[name].toString()};`);
-		});
-
-		artifact.before  && source.push(artifact.before);
 
 		source.push(
 			'// CODE:START',
@@ -41,14 +42,14 @@ export default {
 			}),
 			'// CODE:END'
 		);
-
+		
+		source.push('}');
 		artifact.after && source.push(artifact.after);
-		artifact.export && source.push(`return ${artifact.export}`);
 
 		// Debug
 		console.log(source.join('\n'));
 
-		return <any>Function('__SCOPE__', source.join('\n'));
+		return <any>Function(source.join('\n'));
 	},
 
 	fromString(input:string, options:XCompileOptions) {

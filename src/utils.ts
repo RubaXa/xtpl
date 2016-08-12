@@ -18,29 +18,37 @@ export function stringify(values:any[], bone?:Bone):string;
 export function stringify(values, bone) {
 	let value = values;
 
+	if (bone === void 0) {
+		bone = {};
+	}
+
 	if (values != null) {
 		switch (values.type) {
 			case GROUP_TYPE:
-				value = `(${values.test} ? ${stringify(values.raw, bone)} : "")`; 
+				value = `(${values.test} ? ${stringify(values.raw, bone)} : "")`;
+				bone.hasComputedAttrs = true; 
 				break;
 
 			case INHERIT_TYPE:
 				const selfMode = values.raw === 'self';
-
+				let target = bone; 
+				
 				do {
-					!selfMode && (bone = bone.parent);
+					!selfMode && (target = target.parent);
 
-					if (bone.raw.attrs.class) {
-						value = stringify(bone.raw.attrs.class[0], bone);
+					if (target.raw.attrs.class) {
+						value = stringify(target.raw.attrs.class[0], target);
 						break;
 					}
 
-					selfMode && (bone = bone.parent);
+					selfMode && (target = target.parent);
 				} while (1);
+				bone.hasComputedAttrs = bone.hasComputedAttrs || target.hasComputedAttrs; 
 				break;
 
 			case EXPRESSION_TYPE:
 				value = `(${values.raw})`;
+				bone.hasComputedAttrs = true;
 				break;
 		
 			default:

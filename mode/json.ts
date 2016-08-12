@@ -5,7 +5,7 @@ import {
 	COMMENT_TYPE,
 	TEXT_TYPE,
 	KEYWORD_TYPE,
-	TAG_TYPE
+	TAG_TYPE,
 } from '../syntax/utils';
 import xtplParser from '../syntax/xtpl';
 import {compile as compileKeyword} from '../src/keywords';
@@ -15,9 +15,11 @@ interface Node {
 	type:string;
 	name:string;
 	attrs:any;
+	attrsStr:string;
 	value:string;
 	children:Node[];
 	computed:boolean;
+	hasComputedAttrs:boolean;
 }
 
 export interface JSONModeOptions {
@@ -34,14 +36,20 @@ export default (options:JSONModeOptions = {}) => (node:Bone) => {
 		const raw = node.raw || {};
 		const type = node.type;
 		const nodes = node.nodes;
-		const name = raw.name;
-		const attrs = raw.attrs;
+		const name = (type === TAG_TYPE) ? stringify(raw.name, node) : raw.name;
+		const value = stringify(raw.value, node);
+		const attrs = raw.attrs || {};
+		const attrsStr = (type === TAG_TYPE) && Object.keys(attrs || {})
+							.map(name => `${stringify(name)}: ${stringifyAttr(name, attrs[name], node)}`)
+							.join(', ');
 
 		let computed = (type === KEYWORD_TYPE);
+		let hasComputedAttrs = (<any>node).hasComputedAttrs;
 
 		const children = nodes.map(node => {
 			const child = processing(node);
 			computed = computed || child.computed;
+			hasComputedAttrs = hasComputedAttrs || child.hasComputedAttrs;
 			return child;
 		});
 		
@@ -49,14 +57,16 @@ export default (options:JSONModeOptions = {}) => (node:Bone) => {
 			type,
 			name,
 			attrs,
-			value: raw.value,
+			attrsStr,
+			value,
 			children,
-			computed
+			computed,
+			hasComputedAttrs
 		};
 	}
 
 	function compile(pad:string, node:Node, rootVar?:string, isStatic?:boolean):string {
-		const {type, name, value, attrs, children, computed} = node;
+		const {type, name, value, attrs, attrsStr, children, computed, hasComputedAttrs} = node;
 		let code;
 
 		if (type === KEYWORD_TYPE) {
@@ -84,17 +94,13 @@ export default (options:JSONModeOptions = {}) => (node:Bone) => {
 			flush();
 			code += `${pad}${pair[1]}\n`;
 		} else if (type === TEXT_TYPE) {
-			code = stringify(value);
+			code = value;
 		} else if (type === COMMENT_TYPE) {
 			code = `{tag: "!", children: ${stringify(value)} }`;
 		} else {
 			const length = children.length;
-			const attrsStr = Object
-								.keys(attrs || {})
-								.map(name => `${stringify(name)}: ${stringifyAttr(name, attrs[name], <Bone><any>node)}`)
-								.join(', ');
 
-			code = `{tag: ${stringify(name)}${attrsStr ? `, attrs: {${attrsStr}}` : ''}`;
+			code = `{tag: ${name}${attrsStr ? `, attrs: {${attrsStr}}` : ''}`;
 
 			if (length === 1 && children[0].type === TEXT_TYPE) {
 				code += `, children: ${compile('', children[0])}}`;
@@ -115,7 +121,7 @@ export default (options:JSONModeOptions = {}) => (node:Bone) => {
 
 						code += compile(pad, child, localVar);
 					} else {
-						const next = compile(pad, child, null, !computed);
+						const next = compile(pad, child, null, !computed && !hasComputedAttrs);
 
 						if (staticChildren) {
 							code += (i ? ', ' : '') + next;
@@ -135,7 +141,7 @@ export default (options:JSONModeOptions = {}) => (node:Bone) => {
 				code += '}';
 			}
 
-			if (!computed && !isStatic) {
+			if (!computed && !isStatic && !hasComputedAttrs) {
 				code = `__S${staticFragments.push(code)}`;
 				
 				if (rootVar === '__ROOT') {
@@ -154,8 +160,6 @@ export default (options:JSONModeOptions = {}) => (node:Bone) => {
 		staticFragments.map((code, i) => `__S${i+1} = ${code}`)
 	);
 
-	code = (vars.length ? `var ${vars.join(', ')};\n` : '') + code;
-
 	if (hasRoot) {
 		let exportName;
 		
@@ -165,11 +169,11 @@ export default (options:JSONModeOptions = {}) => (node:Bone) => {
 			return '';
 		});
 
-		code += `\nreturn ${exportName}`
+		code = exportName ? `${code}\nreturn ${exportName}` : `return (${code})`;
 	}
 
 	return {
-		code,
-		export: false
+		before: (vars.length ? `var ${vars.join(', ')};\n` : ''),
+		code
 	};
 };

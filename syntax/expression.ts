@@ -171,8 +171,14 @@ export default <SkeletikParser>skeletik({
 			const last = bone.last as EBone;
 
 			if (last) {
+				const prev = last.raw;
+
 				if (last.type === T_SIGN) {
-					if (chr === '=' && (last.raw === '<' || last.raw === '>' || last.raw === '=' || last.raw === '==')) {
+					if (
+						(chr === '=') && (prev === '<' || prev === '>' || prev === '=' || prev === '==') ||
+						(chr === '&') && (prev === '&') ||
+						(chr === '|') && (prev === '|')
+					) {
 						last.raw += chr;
 						return;
 					}

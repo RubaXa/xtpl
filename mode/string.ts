@@ -128,8 +128,6 @@ export default (options:StringModeOptions = {}) => (node:Bone) => {
 	}
 
 	return {
-		before: '',
-		code: 'var ' + clean(compile(node, '')),
-		export: '__ROOT',
+		code: `var ${clean(compile(node, ''))}\nreturn __ROOT`,
 	};
 };

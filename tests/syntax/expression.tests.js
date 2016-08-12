@@ -159,7 +159,10 @@ define(['qunit', 'xtpl/syntax/expression'], function (QUnit, expressionParser) {
 
 	testSyntax(
 		'Conditionals: without errors',
-		['1 == 2', '1 === 2', '1 < 2', '1 <= 2', '1 > 2', '1 >= 2']
+		[
+			'1 == 2', '1 === 2', '1 < 2', '1 <= 2', '1 > 2', '1 >= 2',
+			'1 || 2', '1 && 2'
+		]
 	);
 
 	// testSyntax(
