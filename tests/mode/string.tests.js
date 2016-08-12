@@ -50,6 +50,7 @@ define([
 
 		assert.codeEqual(template, 'var __ROOT = "<h1 class=\\\"title-" + (size) + "\\\">Hi, " + (user) + "!</h1>";');
 		assert.deepEqual(template({user: 'xtpl', size: 'xxl'}), '<h1 class="title-xxl">Hi, xtpl!</h1>');
+		assert.deepEqual(template({user: 'X', size: 'wow'}), '<h1 class="title-wow">Hi, X!</h1>');
 	});
 
 	QUnit.test('nesting', function (assert) {
