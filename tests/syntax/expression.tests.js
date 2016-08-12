@@ -148,13 +148,18 @@ define(['qunit', 'xtpl/syntax/expression'], function (QUnit, expressionParser) {
 	);
 
 	testSyntax(
-		'Сonditional operator',
+		'Conditional operator',
 		['true ? 1 : 2', '1 ? 2 : 3, 4']
 	);
 
 	testSyntax(
-		'Сonditional operator error: Unexpected token',
+		'Conditional operator error: Unexpected token',
 		['true ? : 2', '(1 ? 2 : )']
+	);
+
+	testSyntax(
+		'Conditionals: without errors',
+		['1 == 2', '1 === 2', '1 < 2', '1 <= 2', '1 > 2', '1 >= 2']
 	);
 
 	// testSyntax(
