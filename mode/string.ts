@@ -26,6 +26,7 @@ export default (options:StringModeOptions = {}) => (node:Bone) => {
 	const {prettify} = options;
 	const NL = prettify ? '\n' : '';
 	const CUSTOM_ELEMENTS = {};
+	const customElemets = [];
 
 	function push(value:string, raw?:boolean):string {
 		return `__ROOT += ${raw ? value : stringify(value)};\n`;
@@ -43,7 +44,7 @@ export default (options:StringModeOptions = {}) => (node:Bone) => {
 	function compile(node, pad:string) {
 		const raw = node.raw;
 		const type = node.type;
-		let code;
+		let code = '';
 
 		if (!prettify) {
 			pad = '';
@@ -70,12 +71,18 @@ export default (options:StringModeOptions = {}) => (node:Bone) => {
 				const pair = compileKeyword(raw.name, raw.attrs);
 				code = pair[0] + content + pair[1];
 			} else if (DEFINE_TYPE === type) {
-				throw 'todo';
-				// const {name} = raw;
-				// const attrsToVars = raw.attrs.map(name => `  var ${name} = attrs.${name}`).join('\n');
+				const {name} = raw;
+				const attrsToVars = raw.attrs.map(name => `  var ${name} = attrs.${name}`).join('\n');
 				
-				// CUSTOM_ELEMENTS[name] = 1;
-				// code = `${pad}function ${name}(attrs) {\n${attrsToVars}\n  ${content}}\n`;
+				CUSTOM_ELEMENTS[name] = 1;
+				customElemets.push(
+					`var ${name} = ${pad}function (attrs) {\n`,
+					`${attrsToVars}\n`,
+					`  var __ROOT = "";\n`,
+					`  ${content}\n`,
+					`  return __ROOT;`,
+					`}\n`
+				);
 			} else if (TEXT_TYPE === type) {
 				code = push(raw.value);
 			} else if (COMMENT_TYPE === type) {
@@ -83,12 +90,12 @@ export default (options:StringModeOptions = {}) => (node:Bone) => {
 			} else if (HIDDEN_CLASS_TYPE === type) {
 				code = content + NL;
 			} else if (CUSTOM_ELEMENTS[raw.name]) {
-				throw 'todo';
-				// const attrsStr = Object
-				// 				.keys(raw.attrs || {})
-				// 				.map(name => `${stringifyObjectKey(name)}: ${stringifyObjectValue(raw.attrs[name])}`)
-				// 				.join(', ');
-				// code = `${pad}${raw.name}({` + attrsStr + '});\n';
+				const attrsStr = Object
+								.keys(raw.attrs || {})
+								.map(name => `${stringify(name)}: ${stringify(raw.attrs[name])}`)
+								.join(', ');
+
+				code = `__ROOT += ${pad}${raw.name}({` + attrsStr + '});\n';
 			} else {
 				const {name} = raw;
 				const attrsStr = Object
@@ -101,7 +108,7 @@ export default (options:StringModeOptions = {}) => (node:Bone) => {
 				if (SHORT[name]) {
 					code += push(`/>${NL}`);
 				} else {
-					code += push('>') + content + push(`</${name}>${NL}`);
+					code += push('>') + content + push('</') + push(name) + push(`>${NL}`);
 				}
 			}
 		}
@@ -114,7 +121,11 @@ export default (options:StringModeOptions = {}) => (node:Bone) => {
 		
 		do {
 			prev = content;
-			content = content.replace(/(__ROOT \+= ".*?)";\n*__ROOT \+= "/g, '$1');
+			content = content
+				.replace(/(__ROOT \+= ".*?)";\n*__ROOT \+= "/g, '$1')
+				.replace(/(__ROOT \+= .*?\));\n?__ROOT \+= /g, '$1 + ')
+				.replace(/(__ROOT \+= ".*?");\n*__ROOT \+= \(/g, '$1 + (')
+			;
 		} while (prev !== content);
 
 		return content
@@ -124,10 +135,14 @@ export default (options:StringModeOptions = {}) => (node:Bone) => {
 			.replace(/\\n";\n$/, '";')
 			.replace(/__ROOT \+= "";/g, '')
 			.trim()
+			.replace(/(var __ROOT = ")";[\n ]*__ROOT \+?= "/, '$1')
 		;
 	}
 
+	const code = `var ${clean(compile(node, ''))}\nreturn __ROOT`;
+
 	return {
-		code: `var ${clean(compile(node, ''))}\nreturn __ROOT`,
+		before: clean(customElemets.join('')),
+		code,
 	};
 };

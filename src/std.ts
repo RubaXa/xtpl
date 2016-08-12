@@ -15,5 +15,9 @@ export default {
 				}
 			}
 		}
+	},
+
+	CLASS(lego:Function) {
+		debugger;
 	}
 };

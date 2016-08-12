@@ -23,7 +23,14 @@ export default {
 		const source = [];
 		const artifact = options.mode(fragment);
 
-		artifact.before && source.push(artifact.before);
+		function parseSTD(code:string):string {
+			return code.replace(/XTPL_STD_([A-Z_]+)/g, (fullName, name) => {
+				source.unshift(`var ${fullName} = ${stdLib[name].toString()}`);
+				return fullName;
+			})
+		}
+
+		artifact.before && source.push(parseSTD(artifact.before));
 
 		source.push(
 			'return function compiledTemplate(__SCOPE__) {',
@@ -36,10 +43,7 @@ export default {
 
 		source.push(
 			'// CODE:START',
-			artifact.code.replace(/XTPL_STD_([A-Z_]+)/g, (fullName, name) => {
-				source.unshift(`var ${fullName} = ${stdLib[name].toString()}`);
-				return fullName;
-			}),
+			parseSTD(artifact.code),
 			'// CODE:END'
 		);
 		

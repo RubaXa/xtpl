@@ -110,4 +110,15 @@ define([
 		template = fromString('for ([key, val] in data)\n  | ${key}:${val},', ['data']);
 		assert.equal(template({data: [1, 2]}), '0:1,1:2,');
 	});
+
+	QUnit.test('btn = [text, url]', function (assert) {
+		let template = fromString([
+			'btn = [text, url]',
+			'  ${url ? "a" : "button"}.btn[href="${url}"] | ${text}',
+			'btn[text="${text}" url="${href}"]'
+		].join('\n'), ['text', 'href']);
+
+		assert.equal(template({text: 'Wow!'}), "<button class=\"btn\" href=\"undefined\">Wow!</button>");
+		assert.equal(template({text: 'LOL!', href: 'domain.com'}), "<a class=\"btn\" href=\"domain.com\">LOL!</a>");
+	});
 });
