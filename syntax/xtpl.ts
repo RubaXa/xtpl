@@ -1,6 +1,8 @@
 import skeletik, {Lexer, Bone, SkeletikParser} from 'skeletik';
 import * as utils from './utils';
 
+import xmlParser from './xml'; 
+
 export interface XBone extends Bone {
 	group?:boolean;
 	shorty?:boolean;
@@ -148,7 +150,6 @@ const addTag = utils.addTag;
 const addComment = utils.addComment;
 const addKeyword = utils.addKeyword;
 const fail = utils.fail;
-const parseXML = utils.parseXML;
 const parseJS = utils.parseJS;
 const parseJSCallArgs = utils.parseJSCallArgs;
 const expressionMixin = utils.expressionMixin;
@@ -225,6 +226,14 @@ function inheritEntryHandle(returns?:boolean) {
 	}
 
 	return retVal;
+}
+
+function parseXML(lex:Lexer, root:Bone) {
+	xmlParser.capture(lex, {
+		onpeek(lex, bone) {
+			return !(bone.type === ROOT_TYPE && (lex.prevCode === PIPE_CODE && lex.code === HASHTAG_CODE));
+		}
+	}, root);
 }
 
 // Create parser

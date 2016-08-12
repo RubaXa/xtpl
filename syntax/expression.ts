@@ -172,6 +172,11 @@ export default <SkeletikParser>skeletik({
 
 			if (last) {
 				if (last.type === T_SIGN) {
+					if (chr === '=' && (last.raw === '<' || last.raw === '>' || last.raw === '=' || last.raw === '==')) {
+						last.raw += chr;
+						return;
+					}
+
 					lex.error(`Unexpected token ${chr}`);
 				} else if (lex.code === DOT_CODE && last.type === T_NUMBER) {
 					last.isFloat && lex.error('Unexpected end of input');

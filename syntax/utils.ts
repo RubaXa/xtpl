@@ -1,6 +1,5 @@
 import {Lexer, Bone, SkeletikState} from 'skeletik';
 import expressionParser from './expression';
-import xmlParser from './xml';
 
 // Types
 export const ROOT_TYPE = '#root';
@@ -68,14 +67,6 @@ export function addCDATA(parent:Bone, value:string):void {
 
 export function fail(lex:Lexer, bone:Bone):void {
 	lex.error(`Invalid character \`${lex.getChar()}\`, state: ${lex.state}`, bone);
-}
-
-export function parseXML(lex:Lexer, root:Bone) {
-	xmlParser.capture(lex, {
-		onpeek(lex, bone) {
-			return !(bone.type === ROOT_TYPE && (lex.prevCode === PIPE_CODE && lex.code === HASHTAG_CODE));
-		}
-	}, root);
 }
 
 export function parseJS(lex:Lexer, stopper:number, initialOffset:number = 0) {
