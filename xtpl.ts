@@ -1,5 +1,6 @@
 import {Bone} from 'skeletik';
 import xtplParser from './syntax/xtpl';
+import stdLib from './src/std';
 
 export interface XCompileOptions {
 	mode:any;
@@ -30,14 +31,23 @@ export default {
 			source.push(`var ${name} = ${artifact.utils[name].toString()};`);
 		});
 
-		source.push(artifact.before || '', '');
-		source.push('// CODE:START', artifact.code || '', '// CODE:END');
+		artifact.before  && source.push(artifact.before);
+
+		source.push(
+			'// CODE:START',
+			artifact.code.replace(/XTPL_STD_([A-Z_]+)/g, (fullName, name) => {
+				source.unshift(`var ${fullName} = ${stdLib[name].toString()}`);
+				return fullName;
+			}),
+			'// CODE:END'
+		);
+
 		artifact.after && source.push(artifact.after);
 
 		source.push(`return ${artifact.export}`);
-		
+
 		// Debug
-		// console.log(source.join('\n'));
+		console.log(source.join('\n'));
 
 		return <any>Function('__SCOPE__', source.join('\n'));
 	},

@@ -101,4 +101,12 @@ define([
 		assert.equal(template({x: 2}), '<b></b>');
 		assert.equal(template({}), '<c></c>');
 	});
+
+	QUnit.test('FOR statement', function (assert) {
+		let template = fromString('for (val in data)\n  | ${val},', ['data']);
+		assert.equal(template({data: [1, 2]}), '1,2,');
+
+		template = fromString('for ([key, val] in data)\n  | ${key}:${val},', ['data']);
+		assert.equal(template({data: [1, 2]}), '0:1,1:2,');
+	});
 });

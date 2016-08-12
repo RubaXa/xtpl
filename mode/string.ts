@@ -122,6 +122,7 @@ export default (options:StringModeOptions = {}) => (node:Bone) => {
 			.replace(/(__ROOT )\+=/, '$1=')
 			.replace(/ = "\\n/, ' = "')
 			.replace(/\\n";\n$/, '";')
+			.replace(/__ROOT \+= "";/g, '')
 			.trim()
 		;
 	}

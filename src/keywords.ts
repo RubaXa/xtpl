@@ -22,6 +22,17 @@ export function compile(name:string, attrs:any):jscode {
 	return keywords[name](attrs);
 }
 
-keywords['if'] = ({test}) => [`if (${test}) {`, '}'];
-keywords['else'] = ({test}) => [test ? `else if (${test}) {` : 'else {', '}'];
-keywords['for'] = ({data, as, key}) => [`EACH(${data}, function EACH_ITERATOR(${as}, ${key || '$index'}) {`, '})'];
+keywords['if'] = ({test}) => [
+	`if (${test}) {`,
+	'}'
+];
+
+keywords['else'] = ({test}) => [
+	(test ? `else if (${test}) {` : 'else {'),
+	'}'
+];
+
+keywords['for'] = ({data, as, key}) => [
+	`XTPL_STD_EACH(${data}, function EACH_ITERATOR(${as}, ${key || '$index'}) {`,
+	'});'
+];
