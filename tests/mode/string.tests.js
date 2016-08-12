@@ -22,7 +22,11 @@ define([
 		'    <h1 class="title">Bar</h1>',
 		'  </body>',
 		'</html>'
-	]
+	];
+
+	function fromString(input, scope) {
+		return xtpl.fromString(input, {mode: stringMode(), scope: scope});
+	}
 
 	QUnit.module('xtpl / mode / string')
 
@@ -42,41 +46,36 @@ define([
 
 
 	QUnit.test('interpolate', function (assert) {
-		const template = xtpl.fromString('h1.title-${size} | Hi, ${user}!', {
-			mode: stringMode(),
-			scope: ['user', 'size']
-		});
+		const template = fromString('h1.title-${size} | Hi, ${user}!', ['user', 'size']);
 
 		assert.codeEqual(template, 'var __ROOT = "<h1 class=\\\"title-" + (size) + "\\\">Hi, " + (user) + "!</h1>";');
 		assert.deepEqual(template({user: 'xtpl', size: 'xxl'}), '<h1 class="title-xxl">Hi, xtpl!</h1>');
 	});
 
 	QUnit.test('nesting', function (assert) {
-		const template = xtpl.fromString('.btn > .&__text', {mode: stringMode()});
+		const template = fromString('.btn > .&__text');
 		assert.codeEqual(template, 'var __ROOT = "<div class=\\\"btn\\\"><div class=\\\"btn__text\\\"></div></div>";');
 	});
 
 	QUnit.test('nesting + interpolate', function (assert) {
-		const template = xtpl.fromString('.${x} > .&__text', {mode: stringMode(), scope: ['x']});
+		const template = fromString('.${x} > .&__text', ['x']);
 		
 		assert.codeEqual(template, 'var __ROOT = \"<div class=\\\"\" + (x) + \"\\\"><div class=\\\"\" + (x) + \"__text\\\"></div></div>\";');
 		assert.equal(template({x: 'ico'}), '<div class=\"ico\"><div class=\"ico__text\"></div></div>');
 	});
 
 	QUnit.test('nesting + hidden_class', function (assert) {
-		const template = xtpl.fromString('.foo > %-bar > .&__ico + .&__txt', {mode: stringMode()});
-		
-		assert.codeEqual(template, 'var __ROOT = \"<div class=\\\"foo\\\"><div class=\\\"foo-bar__ico\\\"></div><div class=\\\"foo-bar__txt\\\"></div></div>\";');
+		const template = fromString('.foo > %-bar > .&__ico + .&__txt');
 		assert.equal(template(), '<div class=\"foo\"><div class=\"foo-bar__ico\"></div><div class=\"foo-bar__txt\"></div></div>');
 	});
 
 	QUnit.test('self nesting', function (assert) {
-		const template = xtpl.fromString('.foo\n  class.&_small: true', {mode: stringMode()});
+		const template = fromString('.foo\n  class.&_small: true');
 		assert.equal(template(), '<div class=\"foo foo_small\"></div>');
 	});
 
 	QUnit.test('self nesting + interpolate', function (assert) {
-		const template = xtpl.fromString('.foo\n  class.&_${mode}: true', {mode: stringMode(), scope: ['mode']});
+		const template = fromString('.foo\n  class.&_${mode}: true', ['mode']);
 		assert.equal(template({mode: 'bar'}), '<div class=\"foo foo_bar\"></div>');
 	});
 
