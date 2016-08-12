@@ -1,52 +1,83 @@
+define([
+	'qunit',
+	'xtpl',
+	'xtpl/mode/json',
+	'../qunit.assert.codeEqual'
+], function (
+	QUnit,
+	xtplModule,
+	jsonModeModule
+) {
+	'use strict';
 
-	QUnit.test('json', function (assert) {
-		const template = xtpl.compile(frag, {mode: jsonMode()});
+	const xtpl = xtplModule.default;
+	const jsonMode = jsonModeModule.default;
+	const pageFrag = xtpl.parse(`html\n\thead > title | foo\n\tbody > h1.title | Bar`);
+	const pageExpected = [
+		'<html>',
+		'  <head>',
+		'    <title>foo</title>',
+		'  </head>',
+		'  <body>',
+		'    <h1 class="title">Bar</h1>',
+		'  </body>',
+		'</html>'
+	];
 
-		assert.equal(typeof template, 'function')
-		assert.deepEqual(template(), {
-			tag: undefined,
-			children: {
-				tag: "html",
-				children: [
-					{
-						tag: "head",
-						children: {tag: "title", children: "foo"}
-					}, {
-						tag: "body",
-						children: {
-							tag: "h1",
-							children: "Bar"
-						}
-					}
-				]
-			}
-		});
+	function fromString(input, scope) {
+		return xtpl.fromString(input, {mode: jsonMode(), scope: scope});
+	}
+
+	QUnit.module('xtpl / mode / json')
+
+	QUnit.test('|foo', function (assert) {
+		const template = fromString('|foo');
+
+		assert.codeEqual(template, 'var __S1 = {tag: undefined, children: \"foo\"};\nreturn __S1');
+		assert.deepEqual(template(), {children: 'foo', tag: void 0});
 	});
-	
-	QUnit.test('if / json', function (assert) {
-		const template = xtpl.fromString('foo\nif (x)\n  bar', {mode: jsonMode(), scope: ['x']});
 
-		assert.deepEqual(template({x: false}), {tag: undefined, children: [{tag: 'foo'}]});
-		assert.deepEqual(template({x: true}), {tag: undefined, children: [{tag: 'foo'}, {tag: 'bar'}]});
+	QUnit.test('.foo', function (assert) {
+		const template = fromString('.foo');
+
+		assert.codeEqual(template, 'var __S1 = {tag: undefined, children: {tag: \"div\", attrs: {\"class\": \"foo\"}}};\nreturn __S1');
+		assert.deepEqual(template(), {children: {tag: 'div', attrs: {class:'foo'}}, tag: void 0});
 	});
 
-	QUnit.test('foo = [value] / string', function (assert) {
-		// todo: #root-error
-		const template = xtpl.fromString([
-			'foo = [value]',
-			'  b | {value}',
-			'foo[value="1"] + foo[value="x"] + foo[value="{a + b}"] + foo[value="a*b={a * b}"]'
-		].join('\n'), {mode: stringMode(), scope: ['a', 'b']});
+	QUnit.test('b + i', function (assert) {
+		const template = fromString('b + i');
 
-		console.log(template.toString());
-		
-		assert.equal(
-			template({a: 3, b: 2}),
-			[
-				'<b>1</b>',
-				'<b>x</b>',
-				'<b>5</b>',
-				'<b>a*b=6</b>',
-			].join('')
-		);
+		assert.codeEqual(template, 'var __S1 = {tag: undefined, children: [{tag: \"b\"}, {tag: \"i\"}]};\nreturn __S1');
+		assert.deepEqual(template(), {children: [{tag: 'b'}, {tag: 'i'}], tag: void 0});
 	});
+
+	QUnit.test('IF statement', function (assert) {
+		const template = fromString('if (x)\n  b', ['x']);
+
+		assert.deepEqual(template(), {children: [], tag: void 0});
+		assert.deepEqual(template({x: 1}), {children: [{tag: 'b'}], tag: void 0});
+	});
+
+	QUnit.test('IF/ELSE statement', function (assert) {
+		const template = fromString('if (x)\n  b\nelse\n  |?', ['x']);
+
+		assert.deepEqual(template(), {children: ['?'], tag: void 0});
+		assert.deepEqual(template({x: 1}), {children: [{tag: 'b'}], tag: void 0});
+	});
+
+	QUnit.test('IF/ELSE IF/ELSE statement', function (assert) {
+		const template = fromString('if (x == 1)\n  a\nelse if (x == 2)\n  b\nelse\n  |?', ['x']);
+
+		assert.deepEqual(template({x: 1}), {children: [{tag: 'a'}], tag: void 0});
+		assert.deepEqual(template({x: 2}), {children: [{tag: 'b'}], tag: void 0});
+		assert.deepEqual(template(), {children: ['?'], tag: void 0});
+	});
+
+	// QUnit.test('page', function (assert) {
+	// 	const template = xtpl.compile(pageFrag, {mode: jsonMode()});
+
+	// 	assert.equal(typeof template, 'function')
+	// 	assert.deepEqual(template(), null);
+	// });
+
+});

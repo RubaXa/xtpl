@@ -43,8 +43,7 @@ export default {
 		);
 
 		artifact.after && source.push(artifact.after);
-
-		source.push(`return ${artifact.export}`);
+		artifact.export && source.push(`return ${artifact.export}`);
 
 		// Debug
 		console.log(source.join('\n'));
