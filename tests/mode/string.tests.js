@@ -131,6 +131,6 @@ define([
 			'  p | Done',
 		].join('\n'));
 
-		assert.equal(template(), '');
+		assert.equal(template(), '<h1>Wow!</h1><p>Done</p>');
 	});
 });

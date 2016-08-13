@@ -41,6 +41,30 @@ export default (options:StringModeOptions = {}) => (node:Bone) => {
 		return push(value, true);
 	}
 
+	function compileSlots(nodes:Bone[]):string {
+		let defines = [];
+		let defaultSlot = new Bone(DEFINE_TYPE, {
+			name: '__default',
+			type: 'parenthesis',
+			attrs: [],
+		});
+
+		nodes.forEach(node => {
+			if (node.type === DEFINE_TYPE) {
+				defines.push(node);
+			} else {
+				defaultSlot.nodes.push(node);
+			}
+		});
+
+		if (defines.length && defaultSlot.nodes.length) {
+			throw Error('Mixed content');
+		} else if (defines.length) {
+		} else {
+			return `{__default: ${clean(compile(defaultSlot, ''))}}`;
+		}
+	}
+
 	function compile(node, pad:string) {
 		const raw = node.raw;
 		const type = node.type;
@@ -70,19 +94,32 @@ export default (options:StringModeOptions = {}) => (node:Bone) => {
 			} else if (KEYWORD_TYPE === type) {
 				const pair = compileKeyword(raw.name, raw.attrs);
 				code = pair[0] + content + pair[1];
+			} else if (CALL_TYPE === type) {
+				code = `  if (__slots.${raw.name})\n`;
+				code += `    __ROOT += __slots.${raw.name}(${raw.args.join(',')});`;
 			} else if (DEFINE_TYPE === type) {
 				const {name} = raw;
-				const attrsToVars = raw.attrs.map(name => `  var ${name} = attrs.${name}`).join('\n');
 				
-				CUSTOM_ELEMENTS[name] = 1;
-				customElemets.push(
-					`var ${name} = ${pad}function (attrs) {\n`,
-					`${attrsToVars}\n`,
-					`  var __ROOT = "";\n`,
-					`  ${content}\n`,
-					`  return __ROOT;`,
-					`}\n`
-				);
+				if (raw.type === 'parenthesis') {
+					code = `function ${name}(${raw.attrs.join(', ')}) {\n`
+						+ `  var __ROOT = "";\n`
+						+ `  ${content}`
+						+ `  return __ROOT\n`
+						+ `}\n`
+					;
+				} else {
+					const attrsToVars = raw.attrs.map(name => `  var ${name} = attrs.${name}`).join('\n');
+					
+					CUSTOM_ELEMENTS[name] = 1;
+					customElemets.push(
+						`function ${name}(attrs, __slots) {\n`,
+						`${attrsToVars}\n`,
+						`  var __ROOT = "";\n`,
+						`  ${content}`,
+						`  return __ROOT\n`,
+						`}\n`
+					);
+				}
 			} else if (TEXT_TYPE === type) {
 				code = push(raw.value);
 			} else if (COMMENT_TYPE === type) {
@@ -95,7 +132,8 @@ export default (options:StringModeOptions = {}) => (node:Bone) => {
 								.map(name => `${stringify(name)}: ${stringify(raw.attrs[name])}`)
 								.join(', ');
 
-				code = `__ROOT += ${pad}${raw.name}({` + attrsStr + '});\n';
+				code = `${pad}__ROOT += ${raw.name}({${attrsStr}}`;
+				code += node.nodes.length ? `, ${compileSlots(node.nodes)});\n` : `);\n`;
 			} else {
 				const {name} = raw;
 				const attrsStr = Object
@@ -135,14 +173,14 @@ export default (options:StringModeOptions = {}) => (node:Bone) => {
 			.replace(/\\n";\n$/, '";')
 			.replace(/__ROOT \+= "";/g, '')
 			.trim()
-			.replace(/(var __ROOT = ")";[\n ]*__ROOT \+?= "/, '$1')
+			.replace(/(var __ROOT = )"";[\n ]*__ROOT \+?= /g, '$1')
 		;
 	}
 
-	const code = `var ${clean(compile(node, ''))}\nreturn __ROOT`;
+	const code = `var ${compile(node, '')}  return __ROOT`;
 
 	return {
 		before: clean(customElemets.join('')),
-		code,
+		code: clean(code),
 	};
 };

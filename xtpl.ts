@@ -42,9 +42,9 @@ export default {
 		});
 
 		source.push(
-			'// CODE:START',
-			parseSTD(artifact.code),
-			'// CODE:END'
+			'  // CODE:START',
+			'  ' + parseSTD(artifact.code),
+			'  // CODE:END'
 		);
 		
 		source.push('}');
