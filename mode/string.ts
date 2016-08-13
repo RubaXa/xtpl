@@ -65,10 +65,11 @@ export default (options:StringModeOptions = {}) => (node:Bone) => {
 		}
 	}
 
-	function compile(node, pad:string) {
+	function compile(node, pad:string, callList?:string[]) {
 		const raw = node.raw;
 		const type = node.type;
 		let code = '';
+		let innerCallList = [];
 
 		if (!prettify) {
 			pad = '';
@@ -80,7 +81,7 @@ export default (options:StringModeOptions = {}) => (node:Bone) => {
 			let hasText = false;
 			let content = node.nodes.map(function (child) {
 				hasText = child.type === 'text' || hasText;
-				return compile(child, type == '#root' ? '' : pad + '  ');
+				return compile(child, type == '#root' ? '' : pad + '  ', innerCallList);
 			}).join('');
 
 			if (hasText) {
@@ -95,8 +96,10 @@ export default (options:StringModeOptions = {}) => (node:Bone) => {
 				const pair = compileKeyword(raw.name, raw.attrs);
 				code = pair[0] + content + pair[1];
 			} else if (CALL_TYPE === type) {
-				code = `  if (__slots.${raw.name})\n`;
-				code += `    __ROOT += __slots.${raw.name}(${raw.args.join(',')});`;
+				callList.push(raw.name);
+
+				code = `  if (${raw.name})\n`;
+				code += `    __ROOT += ${raw.name}(${raw.args.join(',')});`;
 			} else if (DEFINE_TYPE === type) {
 				const {name} = raw;
 				
@@ -108,12 +111,16 @@ export default (options:StringModeOptions = {}) => (node:Bone) => {
 						+ `}\n`
 					;
 				} else {
-					const attrsToVars = raw.attrs.map(name => `  var ${name} = attrs.${name}`).join('\n');
+					// todo: Пересечение attrs и innerCallList
+					const vars = [].concat(
+						raw.attrs.map(name => `${name} = attrs.${name}`),
+						innerCallList.map(name => `${name} = __slots.${name}`)
+					);
 					
 					CUSTOM_ELEMENTS[name] = 1;
 					customElemets.push(
 						`function ${name}(attrs, __slots) {\n`,
-						`${attrsToVars}\n`,
+						(vars.length ? `  var ${vars.join(', ')}\n` : ''),
 						`  var __ROOT = "";\n`,
 						`  ${content}`,
 						`  return __ROOT\n`,

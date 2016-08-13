@@ -21,7 +21,8 @@ define([
 		'  <body>',
 		'    <h1 class="title">Bar</h1>',
 		'  </body>',
-		'</html>'
+		'</html>',
+		''
 	];
 
 	function fromString(input, scope) {
