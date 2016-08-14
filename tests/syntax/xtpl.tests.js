@@ -766,6 +766,17 @@ define(['qunit', 'xtpl/syntax/xtpl', '../qunit.assert.fragEqual'], function (QUn
 		});
 	});
 
+	QUnit.test('foo = (..) + text', function (assert) {
+		var frag = xtplParser('foo = []\n  | ok\nfoo');
+		
+		assert.equal(frag.length, 2);
+		assert.equal(frag.first.type, 'define');
+		assert.deepEqual(frag.last.raw, {name: 'foo', attrs: {}});
+		
+		assert.equal(frag.first.length, 1);
+		assert.equal(frag.first.first.type, 'text');
+	});
+
 	QUnit.test('foo(..)', function (assert) {
 		function testMe(tpl, args) {
 			var frag = xtplParser(tpl);

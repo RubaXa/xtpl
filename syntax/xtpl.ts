@@ -319,6 +319,8 @@ export default <SkeletikParser>skeletik({
 				parent = addTag(parent, token, tagNameChain);
 			}
 
+			(PIPE_CODE === code) && ((parent as XBone).shorty = true);
+
 			return [state.close ? closeEntry(parent) : parent, state.to || ''];
 		}
 	},
@@ -359,6 +361,7 @@ export default <SkeletikParser>skeletik({
 			addAttrValue(lex, bone, shortAttrType === DOT_CODE ? CLASS_ATTR_NAME : ID_ATTR_NAME, attrValueChain);
 			
 			shortAttrType = code;
+			(PIPE_CODE === code) && ((bone as XBone).shorty = true);
 
 			return (HASHTAG_CODE === code || DOT_CODE === code)
 				? REWIND
@@ -372,7 +375,10 @@ export default <SkeletikParser>skeletik({
 		'}': closeGroup,
 		'>': (lex, bone) => { (bone as XBone).shorty = true; },
 		'+': (lex, bone) => bone.parent,
-		'|': TEXT_AWAIT,
+		'|': (lex, parent) => {
+			(PIPE_CODE === lex.code) && ((parent as XBone).shorty = true);
+			return TEXT_AWAIT
+		},
 		'/': (lex, bone) => [closeEntry(bone), COMMENT_AWAIT],
 		'\n': (lex, bone) => closeEntry(bone),
 		' ': CONTINUE,
@@ -497,18 +503,15 @@ export default <SkeletikParser>skeletik({
 			}
 		},
 
-		'\n': (lex, bone) => {
+		'\n': (lex, bone):string|Bone => {
 			if (bone.raw.multiline) {
 				return CONTINUE;
 			}
 
+			(bone as XBone).shorty = true;
 			addToText(bone, lex.takeToken());
 
-			const parent = bone.parent;
-
-			return (parent.type === ROOT_TYPE || (parent as XBone).group)
-				? parent
-				: closeEntry(parent, false, true);
+			return closeEntry(bone, false, true);
 		}
 	}),
 
