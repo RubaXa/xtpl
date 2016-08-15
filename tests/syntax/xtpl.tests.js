@@ -836,6 +836,15 @@ define(['qunit', 'xtpl/syntax/xtpl', '../qunit.assert.fragEqual'], function (QUn
 		});
 	});
 
+	QUnit.test('h1 > method() + .foo', function (assert) {
+		var frag = xtplParser('h1 > method() + .foo');
+		
+		assert.equal(frag.length, 1);
+		assert.equal(frag.first.length, 2);
+		assert.equal(frag.first.first.type, 'call');
+		assert.equal(frag.first.last.type, 'tag');
+	});
+
 	QUnit.test('class.foo', function (assert) {
 		function testMe(tpl, classes) {
 			var frag = xtplParser(tpl);

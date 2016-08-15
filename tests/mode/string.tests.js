@@ -162,4 +162,18 @@ define([
 
 		assert.equal(template(), '<h1>WOW?</h1><h2>ZYX</h2>');
 	});
+
+	QUnit.test('panel = [title] + super', function (assert) {
+		var template = fromString([
+			'panel = [title]',
+			'  content(title)',
+			'  content = (text)',
+			'    | ${text}',
+			'panel[title="xyz"]',
+			'  content = (text)',
+			'    p > super.content(text.toUpperCase()) + | !'
+		].join('\n'));
+
+		assert.equal(template(), '<p>XYZ!</p>');
+	});
 });

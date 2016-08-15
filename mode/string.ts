@@ -66,9 +66,10 @@ export default (options:StringModeOptions = {}) => (node:Bone) => {
 		}
 	}
 
-	function compile(node, pad:string, callList?:string[], defaultSlots?:string[]) {
-		const raw = node.raw;
+	function compile(node, pad:string, callList?:string[], defaultSlots?:any) {
+		const raw = node.raw || {};
 		const type = node.type;
+		let name = raw.name;
 		let code = '';
 		let innerCallList = [];
 		let innerDefaultSlotsList = (DEFINE_TYPE === type && raw.type === 'bracket') ? {} : defaultSlots;
@@ -95,16 +96,20 @@ export default (options:StringModeOptions = {}) => (node:Bone) => {
 			if (type === '#root') {
 				code = content;
 			} else if (KEYWORD_TYPE === type) {
-				const pair = compileKeyword(raw.name, raw.attrs);
+				const pair = compileKeyword(name, raw.attrs);
 				code = pair[0] + content + pair[1];
 			} else if (CALL_TYPE === type) {
-				callList.push(raw.name);
+				callList.push(name);
 
-				code = `  if (${raw.name})\n`;
-				code += `    __ROOT += ${raw.name}(${raw.args.join(',')});`;
+				if (/^super\./.test(name)) {
+					name = `this.${name.substr(6)}`;
+				}
+
+				code = `  if (${name}) {\n    __ROOT += ${name}`;
+				code += defaultSlots
+							? `.call(${['__super'].concat(raw.args).join(',')});\n}\n`
+							: `(${raw.args.join(',')});\n}\n`;
 			} else if (DEFINE_TYPE === type) {
-				const {name} = raw;
-				
 				if (raw.type === 'parenthesis') {
 					code = `function ${name}(${raw.attrs.join(', ')}) {\n`
 						+ `  var __ROOT = "";\n`
@@ -121,14 +126,14 @@ export default (options:StringModeOptions = {}) => (node:Bone) => {
 					// todo: Пересечение attrs и innerCallList
 					const vars = [].concat(
 						raw.attrs.map(name => `${name} = attrs.${name}`),
-						innerCallList.map(name => {
-							if (innerDefaultSlotsList[name]) {
-								return `${name} = __slots && __slots.${name} || ${innerDefaultSlotsList[name]}`
-							} else {
-								return `${name} = __slots && __slots.${name}`
-							}
-						})
+						innerCallList.map(name => `${name} = __slots && __slots.${name} || __super.${name}`)
 					);
+
+					vars.unshift('__super = {attrs: attrs' +
+						Object.keys(innerDefaultSlotsList).map((name) => {
+							return `,\n  ${name}: ${innerDefaultSlotsList[name]}`;
+						}).join('') +
+					'}');
 
 					CUSTOM_ELEMENTS[name] = 1;
 					customElemets.push(
@@ -146,16 +151,15 @@ export default (options:StringModeOptions = {}) => (node:Bone) => {
 				code = push(`${pad}<!--${raw.value}-->${NL}`);
 			} else if (HIDDEN_CLASS_TYPE === type) {
 				code = content + NL;
-			} else if (CUSTOM_ELEMENTS[raw.name]) {
+			} else if (CUSTOM_ELEMENTS[name]) {
 				const attrsStr = Object
 								.keys(raw.attrs || {})
 								.map(name => `${stringify(name)}: ${stringify(raw.attrs[name])}`)
 								.join(', ');
 
-				code = `${pad}__ROOT += ${raw.name}({${attrsStr}}`;
+				code = `${pad}__ROOT += ${name}({${attrsStr}}`;
 				code += node.nodes.length ? `, ${compileSlots(node.nodes)});\n` : `);\n`;
 			} else {
-				const {name} = raw;
 				const attrsStr = Object
 								.keys(raw.attrs || {})
 								.map(name => push(` ${name}=`) + pushAttr(name, raw.attrs[name], node))
