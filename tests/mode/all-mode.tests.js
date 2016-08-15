@@ -83,7 +83,7 @@ define([
 	);
 
 	test(
-		'tag + text',
+		'tag + text + interpolate',
 		'h1.title-${size} | Hi, ${user}!',
 		[{user: 'xtpl', size: 'xxl'}, {user: 'X', size: 'wow'}],
 		['<h1 class="title-xxl">Hi, xtpl!</h1>', '<h1 class="title-wow">Hi, X!</h1>']
