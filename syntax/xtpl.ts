@@ -143,6 +143,7 @@ let indentSize:number;
 let prevIndent:number;
 let tagNameChain:any[] = [];
 let attrValueChain:any[] = [];
+let isSuper:boolean;
 
 // Shortcut methods
 const add = utils.add;
@@ -303,8 +304,16 @@ export default <SkeletikParser>skeletik({
 	[ENTRY_STOPPER]: {
 		'': (lex:Lexer, parent:Bone):string|Bone|[Bone, string] => {
 			const code = lex.code;
-			const token = lex.takeToken().trim();
+			let token = lex.takeToken().trim();
 			let state = <INextState><any>STOPPER_TO_STATE[code];
+
+			if (token === 'super') {
+				isSuper = true;
+				return ENTRY;
+			} else if (isSuper) {
+				isSuper = false;
+				token = `super.${token}`;
+			}
 
 			switch (typeof state) {
 				case 'string': state = <INextState><any>{to: state}; break;

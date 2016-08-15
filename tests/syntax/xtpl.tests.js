@@ -815,9 +815,25 @@ define(['qunit', 'xtpl/syntax/xtpl', '../qunit.assert.fragEqual'], function (QUn
 		}
 
 		testMe('foo()', []);
+		testMe('foo(a,b)', ['a', 'b']);
+		testMe('foo(a, b)', ['a', 'b']);
+		testMe('foo( a , b )', ['a', 'b']);
+		testMe('foo( a , b, c, d )', ['a', 'b', 'c', 'd']);
 		testMe('foo(Date.now())', ['Date.now()']);
 		testMe('foo(12.toString(36))', ['12.toString(36)']);
 		testMe('foo(factory(null, now()), name)', ['factory(null, now())', 'name']);
+	});
+
+	QUnit.test('super.method()', function (assert) {
+		var frag = xtplParser('super.method(a, b)');
+		
+		assert.equal(frag.length, 1);
+		assert.equal(frag.first.type, 'call');
+		assert.deepEqual(frag.first.raw, {
+			name: 'super.method',
+			args: ['a', 'b'],
+			attrs: {}
+		});
 	});
 
 	QUnit.test('class.foo', function (assert) {

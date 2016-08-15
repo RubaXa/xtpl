@@ -92,7 +92,7 @@ export function parseJSCallArgs(lex:Lexer) {
 		onpeek(lex, bone) {
 			const exit = (bone.type === ROOT_TYPE && (lex.code === CLOSE_PARENTHESIS_CODE));
 
-			if (exit || bone.type === ROOT_TYPE && lex.code === COMMA_CODE) {
+			if ((idx < lex.idx) && (exit || bone.type === ROOT_TYPE && lex.code === COMMA_CODE)) {
 				const token = lex.input.substring(idx, lex.idx).trim();
 				token && args.push(token);
 				idx = lex.idx + 1;
