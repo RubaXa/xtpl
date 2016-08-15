@@ -157,4 +157,15 @@ define([
 		{data: [1, 2]},
 		'0:1,1:2,'
 	);
+
+	test(
+		'Custom element',
+		[
+			'btn = [text, url]',
+			'  ${url ? "a" : "button"}.btn[href="${url}"] | ${text}',
+			'btn[text="${text}" url="${href}"]'
+		].join('\n'),
+		[{text: 'Wow!', href: null}, {text: 'LOL!', href: 'domain.com'}],
+		['<button class=\"btn\" href=\"undefined\">Wow!</button>', '<a class=\"btn\" href=\"domain.com\">LOL!</a>']
+	);
 });

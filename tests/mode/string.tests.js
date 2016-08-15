@@ -59,17 +59,6 @@ define([
 		assert.codeEqual(template, 'var __ROOT = \"<div class=\\\"\" + (x) + \"\\\"><div class=\\\"\" + (x) + \"__text\\\"></div></div>\";\nreturn __ROOT');
 	});
 
-	QUnit.test('btn = [text, url]', function (assert) {
-		var template = fromString([
-			'btn = [text, url]',
-			'  ${url ? "a" : "button"}.btn[href="${url}"] | ${text}',
-			'btn[text="${text}" url="${href}"]'
-		].join('\n'), ['text', 'href']);
-
-		assert.equal(template({text: 'Wow!'}), "<button class=\"btn\" href=\"undefined\">Wow!</button>");
-		assert.equal(template({text: 'LOL!', href: 'domain.com'}), "<a class=\"btn\" href=\"domain.com\">LOL!</a>");
-	});
-
 	QUnit.test('panel = [title] + default slot', function (assert) {
 		var template = fromString([
 			'panel = [title]',

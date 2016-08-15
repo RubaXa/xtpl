@@ -156,22 +156,6 @@ define([
 			'    p | Hi, ${user}!',
 		].join('\n'), ['title', 'user']);
 
-		assert.deepEqual(template({title: 'Home', user: 'xtpl'}), {
-			tag: undefined,
-			children: {
-				tag: "html",
-				children: [{
-					tag: "head",
-					children: [{tag: "title", children: "Home"}, {tag: "script", attrs: {src: "core.js"}}]
-				},
-				{
-					tag: "body",
-					children: [{tag: "h1", children: "Welcome"}, {tag: "p", children: "Hi, xtpl!"}],
-				}]
-				
-			}
-		});
-
 		assert.ok(template().children !== template().children, 'not strict equal');
 		assert.ok(template().children.children[0].children[0] !== template().children.children[0].children[0], 'head > title: not strict equal');
 		assert.ok(template().children.children[0].children[1] === template().children.children[0].children[1], 'head > script: strict equal');
@@ -179,4 +163,14 @@ define([
 		assert.ok(template().children.children[1].children[1] !== template().children.children[1].children[1], 'body > p: not strict equal');
 	});
 
+	QUnit.test('elem = [] (static)', function (assert) {
+		var template = fromString([
+			'elem = [text]',
+			'  p | ${text}',
+			'elem[text="Wow!"]'
+		].join('\n'));
+
+		assert.codeEqual(template, '');
+		assert.ok(template() === template(), 'strict equal');
+	});
 });
