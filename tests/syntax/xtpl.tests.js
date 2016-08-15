@@ -300,6 +300,33 @@ define(['qunit', 'xtpl/syntax/xtpl', '../qunit.assert.fragEqual'], function (QUn
 		testMe('i > b');
 	});
 
+	QUnit.test('h1 > i\nh2 > em', function (assert) {
+		function testMe(tpl) {
+			var frag = xtplParser(tpl);
+			
+			assert.equal(frag.length, 2, tpl);
+			assert.deepEqual(frag.first.raw.name, 'h1');
+			assert.deepEqual(frag.last.raw.name, 'h2');
+		}
+
+		testMe('h1>i\nh2>em');
+		testMe('h1 > i\nh2 > em');
+		testMe('h1 > i.foo\nh2 > em.bar');
+		testMe('h1 > i[foo]\nh2 > em[bar]');
+	});
+
+	QUnit.test('div\n  i > b (multiple)', function (assert) {
+		function testMe(tpl) {
+			var frag = xtplParser(tpl);
+
+			assert.equal(frag.length, 1, tpl);
+			assert.equal(frag.first.length, 2);
+		}
+
+		testMe('div\n  i>b\n  i>b');
+		testMe('div\n  i > b\n  i > b');
+	});
+
 	QUnit.test('i > b | foo', function (assert) {
 		var frag = xtplParser('i > b | foo');
 		

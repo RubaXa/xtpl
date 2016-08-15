@@ -60,16 +60,18 @@ export default (options:StringModeOptions = {}) => (node:Bone) => {
 		if (defines.length && defaultSlot.nodes.length) {
 			throw Error('Mixed content');
 		} else if (defines.length) {
+			return `{${defines.map(define => `${define.raw.name}: ${clean(compile(define, ''))}`).join(', ')}}`;
 		} else {
 			return `{__default: ${clean(compile(defaultSlot, ''))}}`;
 		}
 	}
 
-	function compile(node, pad:string, callList?:string[]) {
+	function compile(node, pad:string, callList?:string[], defaultSlots?:string[]) {
 		const raw = node.raw;
 		const type = node.type;
 		let code = '';
 		let innerCallList = [];
+		let innerDefaultSlotsList = (DEFINE_TYPE === type && raw.type === 'bracket') ? {} : defaultSlots;
 
 		if (!prettify) {
 			pad = '';
@@ -81,7 +83,7 @@ export default (options:StringModeOptions = {}) => (node:Bone) => {
 			let hasText = false;
 			let content = node.nodes.map(function (child) {
 				hasText = child.type === 'text' || hasText;
-				return compile(child, type == '#root' ? '' : pad + '  ', innerCallList);
+				return compile(child, type == '#root' ? '' : pad + '  ', innerCallList, innerDefaultSlotsList);
 			}).join('');
 
 			if (hasText) {
@@ -110,17 +112,28 @@ export default (options:StringModeOptions = {}) => (node:Bone) => {
 						+ `  return __ROOT\n`
 						+ `}\n`
 					;
+
+					if (defaultSlots) {
+						defaultSlots[name] = code;
+						code = '';
+					}
 				} else {
 					// todo: Пересечение attrs и innerCallList
 					const vars = [].concat(
 						raw.attrs.map(name => `${name} = attrs.${name}`),
-						innerCallList.map(name => `${name} = __slots.${name}`)
+						innerCallList.map(name => {
+							if (innerDefaultSlotsList[name]) {
+								return `${name} = __slots && __slots.${name} || ${innerDefaultSlotsList[name]}`
+							} else {
+								return `${name} = __slots && __slots.${name}`
+							}
+						})
 					);
-					
+
 					CUSTOM_ELEMENTS[name] = 1;
 					customElemets.push(
 						`function ${name}(attrs, __slots) {\n`,
-						(vars.length ? `  var ${vars.join(', ')}\n` : ''),
+						(vars.length ? `  var ${vars.join(',\n      ')}\n` : ''),
 						`  var __ROOT = "";\n`,
 						`  ${content}`,
 						`  return __ROOT\n`,
@@ -167,7 +180,7 @@ export default (options:StringModeOptions = {}) => (node:Bone) => {
 		do {
 			prev = content;
 			content = content
-				.replace(/(__ROOT \+= ".*?)";\n*__ROOT \+= "/g, '$1')
+				.replace(/(__ROOT \+= .*?)";\n*__ROOT \+= "/g, '$1')
 				.replace(/(__ROOT \+= .*?\));\n?__ROOT \+= /g, '$1 + ')
 				.replace(/(__ROOT \+= ".*?");\n*__ROOT \+= \(/g, '$1 + (')
 			;

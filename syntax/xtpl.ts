@@ -321,7 +321,7 @@ export default <SkeletikParser>skeletik({
 
 			(PIPE_CODE === code) && ((parent as XBone).shorty = true);
 
-			return [state.close ? closeEntry(parent) : parent, state.to || ''];
+			return [state.close ? closeEntry(parent, false, true) : parent, state.to || ''];
 		}
 	},
 
@@ -652,6 +652,12 @@ export default <SkeletikParser>skeletik({
 				// todo: delta > 1
 				if (delta === 1 && !(bone as XBone).group) {
 					bone = bone.last;
+					
+					if (bone) {
+						while ((bone as XBone).shorty) {
+							bone = bone.last;
+						}
+					}
 				} else if (delta < 0){
 					if ((bone as XBone).group) {
 						(delta < -1) && lex.error('Wrong indent'); // todo: нормальную ошибку

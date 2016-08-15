@@ -12,17 +12,6 @@ define([
 
 	const xtpl = xtplModule.default;
 	const jsonMode = jsonModeModule.default;
-	const pageFrag = xtpl.parse(`html\n\thead > title | foo\n\tbody > h1.title | Bar`);
-	const pageExpected = [
-		'<html>',
-		'  <head>',
-		'    <title>foo</title>',
-		'  </head>',
-		'  <body>',
-		'    <h1 class="title">Bar</h1>',
-		'  </body>',
-		'</html>'
-	];
 
 	function fromString(input, scope) {
 		return xtpl.fromString(input, {mode: jsonMode(), scope: scope})();

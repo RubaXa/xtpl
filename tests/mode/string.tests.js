@@ -10,10 +10,9 @@ define([
 ) {
 	'use strict';
 
-	const xtpl = xtplModule.default;
-	const stringMode = stringModeModule.default;
-	const pageFrag = xtpl.parse(`html\n\thead > title | foo\n\tbody > h1.title | Bar`);
-	const pageExpected = [
+	var xtpl = xtplModule.default;
+	var stringMode = stringModeModule.default;
+	var pageExpected = [
 		'<html>',
 		'  <head>',
 		'    <title>foo</title>',
@@ -32,14 +31,16 @@ define([
 	QUnit.module('xtpl / mode / string')
 
 	QUnit.test('page', function (assert) {
-		const template = xtpl.compile(pageFrag, {mode: stringMode()})();
+		var pageFrag = xtpl.parse(`html\n\thead > title | foo\n\tbody > h1.title | Bar`);
+		var template = xtpl.compile(pageFrag, {mode: stringMode()})();
 
 		assert.equal(typeof template, 'function')
 		assert.deepEqual(template(), pageExpected.map(line => line.trim()).join(''));
 	});
 
 	QUnit.test('page / prettify', function (assert) {
-		const templatePrettify = xtpl.compile(pageFrag, {mode: stringMode({prettify: true})})();
+		var pageFrag = xtpl.parse(`html\n\thead > title | foo\n\tbody > h1.title | Bar`);
+		var templatePrettify = xtpl.compile(pageFrag, {mode: stringMode({prettify: true})})();
 
 		assert.equal(typeof templatePrettify, 'function')
 		assert.deepEqual(templatePrettify(), pageExpected.join('\n'), 'prettify');
@@ -47,7 +48,7 @@ define([
 
 
 	QUnit.test('interpolate', function (assert) {
-		const template = fromString('h1.title-${size} | Hi, ${user}!', ['user', 'size']);
+		var template = fromString('h1.title-${size} | Hi, ${user}!', ['user', 'size']);
 
 		assert.codeEqual(template, 'var __ROOT = "<h1 class=\\\"title-" + (size) + "\\\">Hi, " + (user) + "!</h1>";\nreturn __ROOT');
 		assert.deepEqual(template({user: 'xtpl', size: 'xxl'}), '<h1 class="title-xxl">Hi, xtpl!</h1>');
@@ -55,34 +56,34 @@ define([
 	});
 
 	QUnit.test('nesting', function (assert) {
-		const template = fromString('.btn > .&__text');
+		var template = fromString('.btn > .&__text');
 		assert.codeEqual(template, 'var __ROOT = "<div class=\\\"btn\\\"><div class=\\\"btn__text\\\"></div></div>";\nreturn __ROOT');
 	});
 
 	QUnit.test('nesting + interpolate', function (assert) {
-		const template = fromString('.${x} > .&__text', ['x']);
+		var template = fromString('.${x} > .&__text', ['x']);
 		
 		assert.codeEqual(template, 'var __ROOT = \"<div class=\\\"\" + (x) + \"\\\"><div class=\\\"\" + (x) + \"__text\\\"></div></div>\";\nreturn __ROOT');
 		assert.equal(template({x: 'ico'}), '<div class=\"ico\"><div class=\"ico__text\"></div></div>');
 	});
 
 	QUnit.test('nesting + hidden_class', function (assert) {
-		const template = fromString('.foo > %-bar > .&__ico + .&__txt');
+		var template = fromString('.foo > %-bar > .&__ico + .&__txt');
 		assert.equal(template(), '<div class=\"foo\"><div class=\"foo-bar__ico\"></div><div class=\"foo-bar__txt\"></div></div>');
 	});
 
 	QUnit.test('self nesting', function (assert) {
-		const template = fromString('.foo\n  class.&_small: true');
+		var template = fromString('.foo\n  class.&_small: true');
 		assert.equal(template(), '<div class=\"foo foo_small\"></div>');
 	});
 
 	QUnit.test('self nesting + interpolate', function (assert) {
-		const template = fromString('.foo\n  class.&_${mode}: true', ['mode']);
+		var template = fromString('.foo\n  class.&_${mode}: true', ['mode']);
 		assert.equal(template({mode: 'bar'}), '<div class=\"foo foo_bar\"></div>');
 	});
 
 	QUnit.test('IF statement', function (assert) {
-		const template = fromString('foo\nif (x)\n  bar', ['x']);
+		var template = fromString('foo\nif (x)\n  bar', ['x']);
 
 		assert.equal(template({}), '<foo></foo>');
 		assert.equal(template({x: false}), '<foo></foo>');
@@ -90,14 +91,14 @@ define([
 	});
 
 	QUnit.test('IF/ELSE statement', function (assert) {
-		const template = fromString('if (x)\n  a\nelse\n  b', ['x']);
+		var template = fromString('if (x)\n  a\nelse\n  b', ['x']);
 
 		assert.equal(template({x: true}), '<a></a>');
 		assert.equal(template({x: false}), '<b></b>');
 	});
 
 	QUnit.test('IF/ELSE IF/ELSE statement', function (assert) {
-		const template = fromString('if (x == 1)\n  a\nelse if (x == 2)\n  b\nelse\n  c', ['x']);
+		var template = fromString('if (x == 1)\n  a\nelse if (x == 2)\n  b\nelse\n  c', ['x']);
 
 		assert.equal(template({x: 1}), '<a></a>');
 		assert.equal(template({x: 2}), '<b></b>');
@@ -105,7 +106,7 @@ define([
 	});
 
 	QUnit.test('FOR statement', function (assert) {
-		let template = fromString('for (val in data)\n  | ${val},', ['data']);
+		var template = fromString('for (val in data)\n  | ${val},', ['data']);
 		assert.equal(template({data: [1, 2]}), '1,2,');
 
 		template = fromString('for ([key, val] in data)\n  | ${key}:${val},', ['data']);
@@ -113,7 +114,7 @@ define([
 	});
 
 	QUnit.test('btn = [text, url]', function (assert) {
-		let template = fromString([
+		var template = fromString([
 			'btn = [text, url]',
 			'  ${url ? "a" : "button"}.btn[href="${url}"] | ${text}',
 			'btn[text="${text}" url="${href}"]'
@@ -124,7 +125,7 @@ define([
 	});
 
 	QUnit.test('panel = [title] + default slot', function (assert) {
-		let template = fromString([
+		var template = fromString([
 			'panel = [title]',
 			'  h1 | ${title}',
 			'  __default()',
@@ -133,5 +134,32 @@ define([
 		].join('\n'));
 
 		assert.equal(template(), '<h1>Wow!</h1><p>Done</p>');
+	});
+
+	QUnit.test('panel = [title] + content slot', function (assert) {
+		var template = fromString([
+			'panel = [title]',
+			'  content(title.toUpperCase(), "?")',
+			'panel[title="wow!"]',
+			'  content = (text, chr)',
+			'    p | ${text}${chr}',
+		].join('\n'));
+
+		assert.equal(template(), '<p>WOW!?</p>');
+	});
+
+	QUnit.test('panel = [title] + content slot (+ default)', function (assert) {
+		var template = fromString([
+			'panel = [title]',
+			'  content(title.toUpperCase(), "?")',
+			'  content = (text, chr)',
+			'    | ${text}${chr}',
+			'h1 > panel[title="wow"]',
+			'h2 > panel[title="xyz"]',
+			'  content = (text)',
+			'    | ${text.split("").reverse().join("")}',
+		].join('\n'));
+
+		assert.equal(template(), '<h1>WOW?</h1><h2>ZYX</h2>');
 	});
 });
