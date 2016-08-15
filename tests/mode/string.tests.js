@@ -30,6 +30,11 @@ define([
 
 	QUnit.module('xtpl / mode / string')
 
+	QUnit.test('doctype', function (assert) {
+		var template = fromString(`!html`);
+		assert.equal(template(), '<!DOCTYPE html>');
+	});
+
 	QUnit.test('page', function (assert) {
 		var pageFrag = xtpl.parse(`html\n\thead > title | foo\n\tbody > h1.title | Bar`);
 		var template = xtpl.compile(pageFrag, {mode: stringMode()})();
