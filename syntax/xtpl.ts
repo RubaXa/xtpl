@@ -451,7 +451,7 @@ export default <SkeletikParser>skeletik({
 	[INLINE_ATTR_NEXT]: {
 		'[': INLINE_ATTR_AWAIT,
 		' ': ENTRY_STOPPER_AWAIT,
-		'$name_stopper': TO_ENTRY_GROUP,
+		'$name_stopper': TO_ENTRY_STOPPER,
 		'': fail
 	},
 
