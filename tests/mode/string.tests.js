@@ -35,14 +35,6 @@ define([
 		assert.equal(template(), '<!DOCTYPE html>');
 	});
 
-	QUnit.test('page', function (assert) {
-		var pageFrag = xtpl.parse(`html\n\thead > title | foo\n\tbody > h1.title | Bar`);
-		var template = xtpl.compile(pageFrag, {mode: stringMode()})();
-
-		assert.equal(typeof template, 'function')
-		assert.deepEqual(template(), pageExpected.map(line => line.trim()).join(''));
-	});
-
 	QUnit.test('page / prettify', function (assert) {
 		var pageFrag = xtpl.parse(`html\n\thead > title | foo\n\tbody > h1.title | Bar`);
 		var templatePrettify = xtpl.compile(pageFrag, {mode: stringMode({prettify: true})})();
@@ -54,10 +46,7 @@ define([
 
 	QUnit.test('interpolate', function (assert) {
 		var template = fromString('h1.title-${size} | Hi, ${user}!', ['user', 'size']);
-
 		assert.codeEqual(template, 'var __ROOT = "<h1 class=\\\"title-" + (size) + "\\\">Hi, " + (user) + "!</h1>";\nreturn __ROOT');
-		assert.deepEqual(template({user: 'xtpl', size: 'xxl'}), '<h1 class="title-xxl">Hi, xtpl!</h1>');
-		assert.deepEqual(template({user: 'X', size: 'wow'}), '<h1 class="title-wow">Hi, X!</h1>');
 	});
 
 	QUnit.test('nesting', function (assert) {
@@ -67,55 +56,7 @@ define([
 
 	QUnit.test('nesting + interpolate', function (assert) {
 		var template = fromString('.${x} > .&__text', ['x']);
-		
 		assert.codeEqual(template, 'var __ROOT = \"<div class=\\\"\" + (x) + \"\\\"><div class=\\\"\" + (x) + \"__text\\\"></div></div>\";\nreturn __ROOT');
-		assert.equal(template({x: 'ico'}), '<div class=\"ico\"><div class=\"ico__text\"></div></div>');
-	});
-
-	QUnit.test('nesting + hidden_class', function (assert) {
-		var template = fromString('.foo > %-bar > .&__ico + .&__txt');
-		assert.equal(template(), '<div class=\"foo\"><div class=\"foo-bar__ico\"></div><div class=\"foo-bar__txt\"></div></div>');
-	});
-
-	QUnit.test('self nesting', function (assert) {
-		var template = fromString('.foo\n  class.&_small: true');
-		assert.equal(template(), '<div class=\"foo foo_small\"></div>');
-	});
-
-	QUnit.test('self nesting + interpolate', function (assert) {
-		var template = fromString('.foo\n  class.&_${mode}: true', ['mode']);
-		assert.equal(template({mode: 'bar'}), '<div class=\"foo foo_bar\"></div>');
-	});
-
-	QUnit.test('IF statement', function (assert) {
-		var template = fromString('foo\nif (x)\n  bar', ['x']);
-
-		assert.equal(template({}), '<foo></foo>');
-		assert.equal(template({x: false}), '<foo></foo>');
-		assert.equal(template({x: true}), '<foo></foo><bar></bar>');
-	});
-
-	QUnit.test('IF/ELSE statement', function (assert) {
-		var template = fromString('if (x)\n  a\nelse\n  b', ['x']);
-
-		assert.equal(template({x: true}), '<a></a>');
-		assert.equal(template({x: false}), '<b></b>');
-	});
-
-	QUnit.test('IF/ELSE IF/ELSE statement', function (assert) {
-		var template = fromString('if (x == 1)\n  a\nelse if (x == 2)\n  b\nelse\n  c', ['x']);
-
-		assert.equal(template({x: 1}), '<a></a>');
-		assert.equal(template({x: 2}), '<b></b>');
-		assert.equal(template({}), '<c></c>');
-	});
-
-	QUnit.test('FOR statement', function (assert) {
-		var template = fromString('for (val in data)\n  | ${val},', ['data']);
-		assert.equal(template({data: [1, 2]}), '1,2,');
-
-		template = fromString('for ([key, val] in data)\n  | ${key}:${val},', ['data']);
-		assert.equal(template({data: [1, 2]}), '0:1,1:2,');
 	});
 
 	QUnit.test('btn = [text, url]', function (assert) {
