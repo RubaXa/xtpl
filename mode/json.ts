@@ -17,6 +17,7 @@ import {stringify, stringifyAttr} from '../src/utils';
 interface Node {
 	type:string;
 	name:string;
+	compiledName:string;
 	attrs:any;
 	attrsStr:string;
 	value:string;
@@ -30,30 +31,52 @@ export interface JSONModeOptions {
 }
 
 export default (options:JSONModeOptions = {}) => (node:Bone) => {
+	let varNum = 0;
+	let maxVarNum = 0;
+	const defines = [];
+	const staticFragments = [];
+	const customElements = {};
+
 	function processing(node:Bone):Node {
 		const raw = node.raw || {};
 		const type = node.type;
 		const nodes = node.nodes;
-		const name = (type === TAG_TYPE) ? stringify(raw.name, node) : raw.name;
 		const value = stringify(raw.value, node);
+		const compiledName = (type === TAG_TYPE) ? stringify(raw.name, node) : raw.name;
 		const attrs = raw.attrs || {};
 		const attrsStr = (type === TAG_TYPE) && Object.keys(attrs || {})
-							.map(name => `${stringify(name)}: ${stringifyAttr(name, attrs[name], node)}`)
+							.map(attr => `${stringify(attr)}: ${stringifyAttr(attr, attrs[attr], node)}`)
 							.join(', ');
 
 		let computed = (type === KEYWORD_TYPE);
 		let hasComputedAttrs = (<any>node).hasComputedAttrs;
 
-		const children = nodes.map(node => {
+		const children = [];
+		
+		nodes.forEach(node => {
 			const child = processing(node);
-			computed = computed || child.computed;
-			hasComputedAttrs = hasComputedAttrs || child.hasComputedAttrs;
-			return child;
+
+			if (child.type === DEFINE_TYPE) {
+				const raw = node.raw;
+				
+				if (raw.type === 'bracket') {
+					customElements[raw.name] = {}; // слоты
+					defines.push(compile(child, false));
+				} else {
+					throw 'todo';
+				}
+			} else {
+				computed = computed || child.computed;
+				hasComputedAttrs = hasComputedAttrs || child.hasComputedAttrs;
+
+				children.push(child);
+			}
 		});
 		
 		return {
 			type,
-			name,
+			name: raw.name,
+			compiledName,
 			attrs,
 			attrsStr,
 			value,
@@ -63,14 +86,7 @@ export default (options:JSONModeOptions = {}) => (node:Bone) => {
 		};
 	}
 
-	let varNum = 0;
-	let maxVarNum = 0;
-	const defines = [];
-	const staticFragments = [];
-
-	function compile(node) {
-		let hasRoot = true;
-		
+	function compile(node, hasRoot:boolean = true) {
 		function build(pad:string, node:Node, rootVar?:string, isStatic?:boolean):string {
 			const {type, name, value, attrs, attrsStr, children, computed, hasComputedAttrs} = node;
 			let code;
@@ -104,13 +120,14 @@ export default (options:JSONModeOptions = {}) => (node:Bone) => {
 			} else if (COMMENT_TYPE === type) {
 				code = `{tag: "!", children: ${stringify(value)} }`;
 			} else if (DEFINE_TYPE === type) {
-				defines.push([
-					`function ${name}(${attrs.join(', ')}) {`,
+				code = [
+					`function ${name}(attrs) {`,
+					attrs.length ? `var ${attrs.map(name => `${name} = attrs.${name}`).join(', ')};` : '',
 					compile(children[0]),
 					`}`
-				].join('\n'));
-				
-				code = '';
+				].join('\n');
+			} else if (customElements[name]) {
+				return `${name}(${attrsStr ? `{${attrsStr}}` : ''})`;
 			} else {
 				const length = children.length;
 
@@ -118,7 +135,7 @@ export default (options:JSONModeOptions = {}) => (node:Bone) => {
 					// todo: Неоптимальненько! Нужно убрать это звено.
 					code = '{tag: undefined';
 				} else {
-					code = `{tag: ${name}${attrsStr ? `, attrs: {${attrsStr}}` : ''}`;
+					code = `{tag: ${node.compiledName}${attrsStr ? `, attrs: {${attrsStr}}` : ''}`;
 				}
 
 				if (length === 1 && children[0].type === TEXT_TYPE) {

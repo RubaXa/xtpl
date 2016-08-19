@@ -170,7 +170,8 @@ define([
 			'elem[text="Wow!"]'
 		].join('\n'));
 
-		assert.codeEqual(template, '');
+		assert.codeEqual(template, 'return __S1');
+		assert.deepEqual(template().children, {tag: "p", children: 'Wow!'});
 		assert.ok(template() === template(), 'strict equal');
 	});
 });
