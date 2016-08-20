@@ -163,7 +163,7 @@ define([
 		assert.ok(template().children.children[1].children[1] !== template().children.children[1].children[1], 'body > p: not strict equal');
 	});
 
-	QUnit.test('elem = [] (static)', function (assert) {
+	QUnit.test('elem = [text] (static)', function (assert) {
 		var template = fromString([
 			'elem = [text]',
 			'  p | ${text}',
@@ -174,4 +174,17 @@ define([
 		assert.deepEqual(template().children, {tag: "p", children: 'Wow!'});
 		assert.ok(template() === template(), 'strict equal');
 	});
+
+	QUnit.test('elem = [text] (interpolate)', function (assert) {
+		var template = fromString([
+			'elem = [text]',
+			'  p | ${text}',
+			'elem[text="${x}"]'
+		].join('\n'), ['x']);
+
+		assert.codeEqual(template, 'return ({tag: undefined, children: elem({\"text\": (x)})})');
+		assert.deepEqual(template({x: 'Wow!'}).children, {tag: "p", children: 'Wow!'});
+		assert.ok(template() !== template(), 'not strict equal');
+	});
+
 });

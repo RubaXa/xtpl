@@ -166,6 +166,6 @@ define([
 			'btn[text="${text}" url="${href}"]'
 		].join('\n'),
 		[{text: 'Wow!', href: null}, {text: 'LOL!', href: 'domain.com'}],
-		['<button class=\"btn\" href=\"undefined\">Wow!</button>', '<a class=\"btn\" href=\"domain.com\">LOL!</a>']
+		['<button class=\"btn\" href=\"null\">Wow!</button>', '<a class=\"btn\" href=\"domain.com\">LOL!</a>']
 	);
 });
