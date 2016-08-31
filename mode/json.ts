@@ -48,7 +48,7 @@ export default (options:JSONModeOptions = {}) => (node:Bone) => {
 							.map(attr => `${stringify(attr)}: ${stringifyAttr(attr, attrs[attr], node)}`)
 							.join(', ');
 
-		let computed = (type === KEYWORD_TYPE);
+		let computed = (KEYWORD_TYPE === type) || (CALL_TYPE === type);
 		let hasComputedAttrs = (<any>node).hasComputedAttrs;
 
 		const children = [];
@@ -61,7 +61,7 @@ export default (options:JSONModeOptions = {}) => (node:Bone) => {
 				
 				if (raw.type === 'bracket') {
 					customElements[raw.name] = {}; // слоты
-					defines.push(compile(child, false));
+					defines.push(compile(child, false, customElements[raw.name]));
 				} else {
 					throw 'todo';
 				}
@@ -77,7 +77,7 @@ export default (options:JSONModeOptions = {}) => (node:Bone) => {
 			type,
 			name: raw.name,
 			compiledName,
-			attrs,
+			attrs: raw.args || attrs,
 			attrsStr,
 			value,
 			children,
@@ -86,7 +86,7 @@ export default (options:JSONModeOptions = {}) => (node:Bone) => {
 		};
 	}
 
-	function compile(node, hasRoot:boolean = true) {
+	function compile(node, hasRoot:boolean = true, slots:any = null) {
 		function build(pad:string, node:Node, rootVar?:string, isStatic?:boolean):string {
 			const {type, name, value, attrs, attrsStr, children, computed, hasComputedAttrs} = node;
 			let code;
@@ -119,6 +119,8 @@ export default (options:JSONModeOptions = {}) => (node:Bone) => {
 				code = value;
 			} else if (COMMENT_TYPE === type) {
 				code = `{tag: "!", children: ${stringify(value)} }`;
+			} else if (CALL_TYPE === type) {
+				code = `${name} && ${rootVar}.children.push(${name}(${node.attrs.join(',')}));`;
 			} else if (DEFINE_TYPE === type) {
 				code = [
 					`function ${name}(attrs) {`,
