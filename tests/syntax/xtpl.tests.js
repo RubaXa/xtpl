@@ -595,8 +595,8 @@ define(['qunit', 'xtpl/syntax/xtpl', '../qunit.assert.fragEqual'], function (QUn
 			'',
 			'		em',
 			'',
-			'		b',
-		].join('\n'))
+			'		b'
+		].join('\n'));
 
 		assert.equal(frag.length, 1);
 		assert.equal(frag.first.length, 1);
@@ -605,9 +605,9 @@ define(['qunit', 'xtpl/syntax/xtpl', '../qunit.assert.fragEqual'], function (QUn
 
 	QUnit.test('indent + // comment', function (assert) {
 		var frag = xtplParser('i\n  b\n    em\n//comment\n    | foo');
-		
-		assert.equal(frag.length, 1);
-		assert.equal(frag.first.first.length, 3);
+
+		assert.equal(frag.length, 1, 'root.length');
+		assert.equal(frag.first.first.length, 3, 'b.length');
 		assert.equal(frag.first.first.nodes[1].type, 'comment');
 	});
 
@@ -843,6 +843,17 @@ define(['qunit', 'xtpl/syntax/xtpl', '../qunit.assert.fragEqual'], function (QUn
 		assert.equal(frag.first.length, 2);
 		assert.equal(frag.first.first.type, 'call');
 		assert.equal(frag.first.last.type, 'tag');
+	});
+
+	QUnit.test('Nesting + comment', function (assert) {
+		var frag = xtplParser('a > b\n  //foo\n  i');
+
+		assert.equal(frag.length, 1, 'root.length');
+		assert.equal(frag.first.length, 1, 'a.length');
+		assert.equal(frag.first.first.length, 2, 'b.length');
+		assert.equal(frag.first.first.first.length, 0, 'comment.length');
+		assert.equal(frag.first.first.first.type, 'comment');
+		assert.equal(frag.first.first.last.raw.name, 'i');
 	});
 
 	QUnit.test('class.foo', function (assert) {

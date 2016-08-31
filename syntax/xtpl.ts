@@ -139,8 +139,8 @@ const SPACE_INDENT = 'space';
 let shortAttrType:number;
 let inlineAttrName:string;
 let indentMode:string;
-let indentSize:number;
-let prevIndent:number;
+let indentSize:number = 0;
+let prevIndent:number = 0;
 let tagNameChain:any[] = [];
 let attrValueChain:any[] = [];
 let isSuper:boolean;
@@ -615,12 +615,10 @@ export default <SkeletikParser>skeletik({
 
 	onindent: (lex, bone) => {
 		const code = lex.code;
+		let isComment = (SLASH_CODE === code && SLASH_CODE === lex.peek(+1));
 
-		if (
-			ENTER_CODE === code ||
-			lex.state === TEXT ||
-			(SLASH_CODE === code && lex.peek(+1) === SLASH_CODE)
-		) {
+		// Мультилайн текст
+		if (ENTER_CODE === code || lex.state === TEXT) {
 			return;
 		}
 
@@ -641,21 +639,26 @@ export default <SkeletikParser>skeletik({
 			const indent = lex.indent[mode] / indentSize;
 			let delta = indent - prevIndent;
 
-			if (indent !== (indent|0) || (delta > 1)) {
-				lex.error(
-					'Expected indentation of ' +
-					indentSize * (indent|0) +
-					' ' +
-					mode +
-					' characters but found ' +
-					lex.indent[mode] +
-					'.',
-					bone,
-					-1
-				);
-			}
+			if (isComment) {
+				delta = +(delta === 1); // если
+				prevIndent += delta;
+			} else {
+				if (indent !== (indent | 0) || (delta > 1)) {
+					lex.error(
+						'Expected indentation of ' +
+						indentSize * (indent | 0) +
+						' ' +
+						mode +
+						' characters but found ' +
+						lex.indent[mode] +
+						'.',
+						bone,
+						-1
+					);
+				}
 
-			prevIndent = indent;
+				prevIndent = indent;
+			}
 
 			if (lex.state !== MULTI_COMMENT && lex.state !== INLINE_ATTR_NEXT_WS) {
 				// todo: delta > 1
@@ -693,12 +696,11 @@ export default <SkeletikParser>skeletik({
 
 // Keywords
 export const keywords = (function () {
-	var _name;
-	var _attr;
-	var _cursor;
-	var _variant;
+	let _attr;
+	let _cursor;
+	let _variant;
 
-	var parse = skeletik({
+	const parse = skeletik({
 		'$ws': [' ', '\t', '\n'],
 		'$seq': ['a-z', 'A-Z'],
 		'$name': ['a-z', 'A-Z', '-']
@@ -728,7 +730,6 @@ export const keywords = (function () {
 
 	return {
 		start(name:string):string {
-			_name = name;
 			_cursor = 0;
 			_keyword = KEYWORDS[name];
 			_variant = 0;
@@ -737,7 +738,7 @@ export const keywords = (function () {
 		},
 
 		add(name:string, details:string|string[], options:any = {}) {
-			const variants:Array<any[]> = [].concat(details).map((value) => parse(value).raw.slice(0, -1));
+			const variants:Array<any[]> = <any>[].concat(details).map((value) => parse(value).raw.slice(0, -1));
 			const maxVariants = variants.length;
 
 			KEYWORDS[name] = {
@@ -797,8 +798,8 @@ keywords.add('if', ' ( @test:js )');
 
 keywords.add('else', ' if ( @test:js )', {
 	optional: true,
-	validate: function (lex, bone) {
-		var raw = bone.prev ? bone.prev.raw : {};
+	validate: (lex, bone) => {
+		const raw = bone.prev ? bone.prev.raw : {};
 
 		if (!(raw.name === 'if' || raw.name === 'else' && raw.attrs.test)) {
 			lex.error('Unexpected token else', bone);
