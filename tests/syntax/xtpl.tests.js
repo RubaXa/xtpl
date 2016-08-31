@@ -845,7 +845,7 @@ define(['qunit', 'xtpl/syntax/xtpl', '../qunit.assert.fragEqual'], function (QUn
 		assert.equal(frag.first.last.type, 'tag');
 	});
 
-	QUnit.test('Nesting + comment', function (assert) {
+	QUnit.test('Nesting > comment + tag', function (assert) {
 		var frag = xtplParser('a > b\n  //foo\n  i');
 
 		assert.equal(frag.length, 1, 'root.length');

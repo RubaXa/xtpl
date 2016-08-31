@@ -640,7 +640,7 @@ export default <SkeletikParser>skeletik({
 			let delta = indent - prevIndent;
 
 			if (isComment) {
-				delta = +(delta === 1); // если
+				delta = +(delta > 0);
 				prevIndent += delta;
 			} else {
 				if (indent !== (indent | 0) || (delta > 1)) {

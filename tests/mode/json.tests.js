@@ -187,16 +187,17 @@ define([
 		assert.ok(template() !== template(), 'not strict equal');
 	});
 
-	QUnit.test('elem = [] (default slot)', function (assert) {
+	QUnit.test('elem = [] + default slot', function (assert) {
 		var template = fromString([
 			'elem = []',
-			'  p > __default()',
+			'  __default = ()',
+			'    | def',
 			'elem',
-			'  | Wow!',
+			'elem',
+			'  OK!'
 		].join('\n'));
 
-		assert.codeEqual(template, '');
-		assert.deepEqual(template().children, {tag: "p", children: 'Wow!'});
-		assert.ok(template() === template(), 'strict equal');
+		assert.deepEqual(template({x: 'Wow!'}).children, {tag: "p", children: 'Wow!'});
+		assert.ok(template() !== template(), 'not strict equal');
 	});
 });
