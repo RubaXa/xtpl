@@ -10,214 +10,203 @@ import {
 	DEFINE_TYPE,
 	CALL_TYPE,
 } from '../syntax/utils';
-import xtplParser from '../syntax/xtpl';
 import {compile as compileKeyword} from '../src/keywords';
-import {stringify, stringifyAttr} from '../src/utils';
+import {stringify, stringifyAttr, stringifyObjectKey} from '../src/utils';
 
 interface Node {
 	type:string;
+	computed:boolean; // вариативен с ног, до головы
+	hasComputedAttrs:boolean; // вариативны только аттрибуты
 	name:string;
 	compiledName:string;
 	attrs:any;
-	attrsStr:string;
+	compiledAttrs:string;
 	value:string;
+	compiledValue:string;
+	hasComputedValue:boolean;
 	children:Node[];
-	computed:boolean;
-	hasComputedAttrs:boolean;
+	hasKeywords:boolean;
+	hasComputedChildren:boolean;
 }
 
 export interface JSONModeOptions {
 	debug?:boolean;
 }
 
-export default (options:JSONModeOptions = {}) => (node:Bone) => {
+function toStr(v) {
+	return v == null ? '' : (v + '');
+}
+
+export default (options:JSONModeOptions = {}) => (bone:Bone) => {
+	const constPrefix = '_$';
+	const constObjects = [];
+
 	let varNum = 0;
-	let maxVarNum = 0;
-	const defines = [];
-	const staticFragments = [];
-	const customElements = {};
+	let varMax = 0;
 
-	function processing(node:Bone):Node {
-		const raw = node.raw || {};
-		const type = node.type;
-		const nodes = node.nodes;
-		const value = stringify(raw.value, node);
-		const compiledName = (type === TAG_TYPE) ? stringify(raw.name, node) : raw.name;
-		const attrs = raw.attrs || {};
-		const attrsStr = (type === TAG_TYPE) && Object.keys(attrs || {})
-							.map(attr => `${stringify(attr)}: ${stringifyAttr(attr, attrs[attr], node)}`)
-							.join(', ');
+	function preprocessing(bone:Bone):Node {
+		const raw:any = bone.raw || {};
+		const type = bone.type;
 
-		let computed = (KEYWORD_TYPE === type) || (CALL_TYPE === type);
-		let hasComputedAttrs = (<any>node).hasComputedAttrs;
+		let name = raw.name;
+		let nameDetails = {hasComputedAttrs: false};
+		let compiledName = stringify(name, nameDetails);
+		let attrs = raw.attrs || {};
+		let compiledAttrs = Object.keys(attrs).map((name:string)
+				=> `${stringifyObjectKey(name)}: ${stringifyAttr(name, attrs[name], bone)}`);
+		let value = raw.value;
+		let valueDetails = {hasComputedAttrs: false};
+		let compiledValue = TEXT_TYPE === type ? stringify(value, valueDetails) : '';
+		let hasKeywords = false;
+		let hasComputedChildren = false;
 
 		const children = [];
-		
-		nodes.forEach(node => {
-			const child = processing(node);
 
-			if (child.type === DEFINE_TYPE) {
-				const raw = node.raw;
-				
-				if (raw.type === 'bracket') {
-					customElements[raw.name] = {}; // слоты
-					defines.push(compile(child, false, customElements[raw.name]));
-				} else {
-					throw 'todo';
-				}
+		bone.nodes.forEach((childBone) => {
+			const node = preprocessing(childBone);
+			const type = node.type;
+
+			hasKeywords = hasKeywords || KEYWORD_TYPE === type || node.hasKeywords;
+			hasComputedChildren = hasComputedChildren || node.computed;
+
+			if (HIDDEN_CLASS_TYPE === type) {
+				children.push.apply(children, node.children);
 			} else {
-				computed = computed || child.computed;
-				hasComputedAttrs = hasComputedAttrs || child.hasComputedAttrs;
-
-				children.push(child);
+				children.push(node);
 			}
 		});
-		
+
 		return {
 			type,
-			name: raw.name,
+			computed: (
+				KEYWORD_TYPE === type ||
+				nameDetails.hasComputedAttrs ||
+				valueDetails.hasComputedAttrs ||
+				(<any>bone).hasComputedAttrs ||
+				hasComputedChildren
+			),
+			name,
 			compiledName,
-			attrs: raw.args || attrs,
-			attrsStr,
+			attrs,
+			compiledAttrs: compiledAttrs.length ? `{${compiledAttrs.join(', ')}}` : '',
 			value,
+			compiledValue,
 			children,
-			computed,
-			hasComputedAttrs
+			hasComputedValue: valueDetails.hasComputedAttrs,
+			hasComputedAttrs: (<any>bone).hasComputedAttrs,
+			hasKeywords,
+			hasComputedChildren
 		};
 	}
 
-	function compile(node, hasRoot:boolean = true, slots:any = null) {
-		function build(pad:string, node:Node, rootVar?:string, isStatic?:boolean):string {
-			const {type, name, value, attrs, attrsStr, children, computed, hasComputedAttrs} = node;
-			let code;
+	function allocateConstObject(code) {
+		return code === 'U' ? code : constPrefix + constObjects.push(code);
+	}
 
-			if (KEYWORD_TYPE === type) {
-				const pair = compileKeyword(name, attrs);
-				let staticPool = [];
-				let flush = () => {
-					if (staticPool.length) {
-						code += `${pad}  ${rootVar}.children.push(${staticPool.join(', ')})\n`;
-					}
-				};
-				
-				code = `${pad}${pair[0]}\n`;
+	function compileNode(node:Node, computedParent?:boolean, childrenName?:string) {
+		const type = node.type;
 
-				children.forEach(child => {
-					const res = build(`${pad}  `, child, rootVar);
+		if (TEXT_TYPE === type) {
+			return compileTextNode(node);
+		} else {
+			let compiledName = node.compiledName || 'U';
+			let compiledAttrs = node.compiledAttrs || 'U';
+			let compiledChildren = compileChildren(node.children, node.hasKeywords, node.hasComputedChildren, node.computed);
 
-					if (child.computed) {
-						flush();
-						code += res
-					} else {
-						staticPool.push(res);
-					}
-				});
-
-				flush();
-				code += `${pad}${pair[1]}\n`;
-			} else if (TEXT_TYPE === type) {
-				code = value;
-			} else if (COMMENT_TYPE === type) {
-				code = `{tag: "!", children: ${stringify(value)} }`;
-			} else if (CALL_TYPE === type) {
-				code = `${name} && ${rootVar}.children.push(${name}(${node.attrs.join(',')}));`;
-			} else if (DEFINE_TYPE === type) {
-				code = [
-					`function ${name}(attrs) {`,
-					attrs.length ? `var ${attrs.map(name => `${name} = attrs.${name}`).join(', ')};` : '',
-					compile(children[0]),
-					`}`
-				].join('\n');
-			} else if (customElements[name]) {
-				return `${name}(${attrsStr ? `{${attrsStr}}` : ''})`;
-			} else {
-				const length = children.length;
-
-				if (HIDDEN_CLASS_TYPE === type) {
-					// todo: Неоптимальненько! Нужно убрать это звено.
-					code = '{tag: undefined';
-				} else {
-					code = `{tag: ${node.compiledName}${attrsStr ? `, attrs: {${attrsStr}}` : ''}`;
+			if (node.computed) {
+				if (!node.hasComputedAttrs) {
+					compiledAttrs = allocateConstObject(compiledAttrs);
 				}
 
-				if (length === 1 && children[0].type === TEXT_TYPE) {
-					code += `, children: ${build('', children[0])}}`;
-				} else if (length) {
-					let staticChildren = true;
-					let localVar;
-					
-					code += ', children: ' + (length > 1 || computed ? '[' : '');
-					
-					children.forEach((child, i) => {
-						if (child.computed) {
-							if (staticChildren) {
-								localVar = `__V${varNum++}`;
-								staticChildren = false;
-								
-								code = `${pad}${localVar} = ${code}]}\n${pad}${rootVar}.children.push(${localVar})\n`;
-							}
-
-							code += build(pad, child, localVar);
-						} else {
-							const next = build(pad, child, null, !computed && !hasComputedAttrs);
-
-							if (staticChildren) {
-								code += (i ? ', ' : '') + next;
-							} else {
-								code += `${pad}${rootVar}.children.push(${next})\n`;
-							}
-						}
-					});
-
-					if (staticChildren) {
-						code += (length > 1 ? ']' : '') + '}';
-					} else {
-						maxVarNum = Math.max(maxVarNum, varNum);
-						varNum--;
-					}
-				} else {
-					code += '}';
-				}
-
-				if (!computed && !isStatic && !hasComputedAttrs) {
-					code = `__S${staticFragments.push(code)}`;
-					
-					if (rootVar === '__ROOT') {
-						hasRoot = false;
-						code = `return ${code}`;
-					}
+				if (!node.hasComputedChildren) {
+					compiledChildren = allocateConstObject(compiledChildren);
 				}
 			}
 
-			return code;
+			let beforeCode = '';
+
+			if (compiledChildren instanceof Array) {
+				beforeCode += compiledChildren[0];
+				compiledChildren = compiledChildren[1];
+			}
+
+			let tagCode = `{tag: ${compiledName}, attrs: ${compiledAttrs}, children: ${compiledChildren}}`;
+
+			if (!node.computed && computedParent) {
+				// Статическая нода
+				tagCode = allocateConstObject(tagCode);
+			}
+
+			if (ROOT_TYPE === type) {
+				tagCode = `return ${tagCode}`;
+			} else if (childrenName) {
+				tagCode = `${childrenName}.push(${tagCode});\n`;
+			}
+
+			return beforeCode + tagCode;
 		}
-
-		let code = build('', node, '__ROOT').trim();	
-
-		if (hasRoot) {
-			let exportName;
-			
-			// Наверно есть способ лучше, но мне его лень искать, пусть так
-			code = code.replace(/__ROOT\.children\.push\((.*?)\)\n/, (_, name) => {
-				exportName = name;
-				return '';
-			});
-
-			code = exportName ? `${code}\nreturn ${exportName}` : `return (${code})`;
-		}
-
-		return code;
 	}
 
-	let code = compile(processing(node));
+	function compileTextNode({hasComputedValue, value, compiledValue}:Node) {
+		if (hasComputedValue) {
+			return `S(${compiledValue})`;
+		} else {
+			return value === compiledValue ? `${value} + ""` : compiledValue;
+		}
+	}
 
-	let vars = [].concat(
-		Array.apply(null, Array(maxVarNum)).map((_, i) => `__V${i}`),
-		staticFragments.map((code, i) => `__S${i+1} = ${code}`)
-	);
+	function compileChildren(children:Node[], hasKeywords:boolean, hasComputedChildren:boolean, computedParent:boolean) {
+		const length = children.length;
+
+		if (length > 0) {
+			if (length === 1 && !hasKeywords) {
+				return compileNode(children[0], computedParent);
+			} else {
+				let name = hasKeywords ? `_$$${++varNum}` : null;
+				let code = hasKeywords ? `${name} = [];` : '[';
+
+				children.forEach((node, idx) => {
+					if (idx > 0 && !hasKeywords) {
+						code += ', ';
+					}
+
+					if (KEYWORD_TYPE === node.type) {
+						const pair = compileKeyword(node.name, node.attrs);
+						code += '\n' + pair[0] + '\n';
+						code += node.children.map(child => compileNode(child, true, name)).join('\n');
+						code += pair[1] + '\n';
+					} else {
+						code += compileNode(node, computedParent, name);
+					}
+				});
+
+				varMax = Math.max(varMax, varNum--);
+				!hasKeywords && (code += ']');
+
+				return hasKeywords ? [code, name] : code;
+			}
+		} else {
+			return 'U';
+		}
+	}
+
+	const rootNode = preprocessing(bone);
+	const results = compileNode(rootNode, true);
+	const globalVars = [
+		'U = void 0',
+		`S = ${toStr}`
+	];
+
+	Array.from({length: varMax}).forEach((_, i) => globalVars.push(`_$$${i + 1}`));
+
+	console.log(results);
+
+	constObjects.map((code, idx) => {
+		globalVars.push(`${constPrefix + (idx + 1)} = ${code}`);
+	});
 
 	return {
-		before: defines.join('\n') + '\n' + (vars.length ? `var ${vars.join(', ')};\n` : ''),
-		code
+		before: `var ` + globalVars.join(',\n'),
+		code: results
 	};
 };

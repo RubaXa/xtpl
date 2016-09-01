@@ -26,12 +26,12 @@ export function stringify(values, bone) {
 		switch (values.type) {
 			case GROUP_TYPE:
 				value = `(${values.test} ? ${stringify(values.raw, bone)} : "")`;
-				bone.hasComputedAttrs = true; 
+				bone.hasComputedAttrs = true;
 				break;
 
 			case INHERIT_TYPE:
 				const selfMode = values.raw === 'self';
-				let target = bone; 
+				let target = bone;
 				
 				do {
 					!selfMode && (target = target.parent);
@@ -43,7 +43,7 @@ export function stringify(values, bone) {
 
 					selfMode && (target = target.parent);
 				} while (1);
-				bone.hasComputedAttrs = bone.hasComputedAttrs || target.hasComputedAttrs; 
+				bone.hasComputedAttrs = bone.hasComputedAttrs || target.hasComputedAttrs;
 				break;
 
 			case EXPRESSION_TYPE:
