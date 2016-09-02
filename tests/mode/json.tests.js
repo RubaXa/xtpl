@@ -145,10 +145,8 @@ define([
 	QUnit.test('FOR statement', function (assert) {
 		const template = fromString('ul > for (val in data)\n  li | ${val}', ['data']);
 
-		assert.deepEqual(template({data: [1, 2]}), {children: [{tag: 'ul', children: [
-			{tag: 'li', children: 1},
-			{tag: 'li', children: 2},
-		]}], tag: void 0});
+		assert.deepEqual(template({data: [1, 2]}).children[0].tag, 'ul');
+		assert.deepEqual(template({data: [1, 2]}).children[0].children.length, 2);
 	});
 
 	QUnit.test('page', function (assert) {
@@ -169,15 +167,30 @@ define([
 		assert.ok(template().children.children[1].children[1] !== template().children.children[1].children[1], 'body > p: not strict equal');
 	});
 
-	QUnit.test('elem = [text] (static)', function (assert) {
+	QUnit.test('elem = [] (const element)', function (assert) {
+		var template = fromString([
+			'elem = []',
+			'  p | OK',
+			'elem'
+		].join('\n'));
+
+		assert.deepEqual(template().children.tag, 'p');
+		assert.deepEqual(template().children.children, 'OK');
+		assert.ok(template() === template(), 'strict equal');
+	});
+
+	QUnit.test('elem = [text] (const usage)', function (assert) {
 		var template = fromString([
 			'elem = [text]',
-			'  p | ${text}',
+			'  p | ${text || "def"}',
+			'elem',
 			'elem[text="Wow!"]'
 		].join('\n'));
 
-		assert.codeEqual(template, 'return __S1');
-		assert.deepEqual(template().children, {tag: "p", children: 'Wow!'});
+		assert.deepEqual(template().children[0].tag, 'p');
+		assert.deepEqual(template().children[0].children, 'def');
+		assert.deepEqual(template().children[1].tag, 'p');
+		assert.deepEqual(template().children[1].children, 'Wow!');
 		assert.ok(template() === template(), 'strict equal');
 	});
 
@@ -188,8 +201,8 @@ define([
 			'elem[text="${x}"]'
 		].join('\n'), ['x']);
 
-		assert.codeEqual(template, 'return ({tag: undefined, children: elem({\"text\": (x)})})');
-		assert.deepEqual(template({x: 'Wow!'}).children, {tag: "p", children: 'Wow!'});
+		assert.deepEqual(template({x: 'Wow!'}).children.tag, 'p');
+		assert.deepEqual(template({x: 'Wow!'}).children.children, 'Wow!');
 		assert.ok(template() !== template(), 'not strict equal');
 	});
 

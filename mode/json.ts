@@ -38,8 +38,11 @@ function toStr(v) {
 }
 
 export default (options:JSONModeOptions = {}) => (bone:Bone) => {
+	const UNDEF = 'U';
 	const constPrefix = '_$';
 	const constObjects = [];
+	const defineElems = [];
+	const isDefineElems = {};
 
 	let varNum = 0;
 	let varMax = 0;
@@ -50,29 +53,41 @@ export default (options:JSONModeOptions = {}) => (bone:Bone) => {
 
 		let name = raw.name;
 		let nameDetails = {hasComputedAttrs: false};
-		let compiledName = stringify(name, nameDetails);
+		let compiledName = stringify(name, <Bone><any>nameDetails);
 		let attrs = raw.attrs || {};
-		let compiledAttrs = Object.keys(attrs).map((name:string)
-				=> `${stringifyObjectKey(name)}: ${stringifyAttr(name, attrs[name], bone)}`);
+		let compiledAttrs = Object.keys(attrs).map((name:string) => `${stringifyObjectKey(name)}: ${stringifyAttr(name, attrs[name], bone)}`);
 		let value = raw.value;
 		let valueDetails = {hasComputedAttrs: false};
-		let compiledValue = TEXT_TYPE === type ? stringify(value, valueDetails) : '';
+		let compiledValue = TEXT_TYPE === type ? stringify(value, <Bone><any>valueDetails) : '';
 		let hasKeywords = false;
 		let hasComputedChildren = false;
 
 		const children = [];
 
 		bone.nodes.forEach((childBone) => {
-			const node = preprocessing(childBone);
-			const type = node.type;
+			const type = childBone.type;
 
-			hasKeywords = hasKeywords || KEYWORD_TYPE === type || node.hasKeywords;
-			hasComputedChildren = hasComputedChildren || node.computed;
+			if (DEFINE_TYPE === type) {
+				if (childBone.raw.type === 'parenthesis') {
+					throw 'todo: define slot';
+				} else {
+					const slots = {};
+					const node = preprocessing(childBone);
 
-			if (HIDDEN_CLASS_TYPE === type) {
-				children.push.apply(children, node.children);
+					defineElems.push(node);
+					isDefineElems[node.name] = node;
+				}
 			} else {
-				children.push(node);
+				const node = preprocessing(childBone);
+
+				hasKeywords = hasKeywords || KEYWORD_TYPE === type || node.hasKeywords;
+				hasComputedChildren = hasComputedChildren || node.computed;
+
+				if (HIDDEN_CLASS_TYPE === type) {
+					children.push.apply(children, node.children);
+				} else {
+					children.push(node);
+				}
 			}
 		});
 
@@ -100,17 +115,25 @@ export default (options:JSONModeOptions = {}) => (bone:Bone) => {
 	}
 
 	function allocateConstObject(code) {
-		return code === 'U' ? code : constPrefix + constObjects.push(code);
+		return code === UNDEF ? code : constPrefix + constObjects.push(code);
 	}
 
 	function compileNode(node:Node, computedParent?:boolean, childrenName?:string) {
 		const type = node.type;
+		const name = node.name;
+
+		let compiledAttrs = node.compiledAttrs || UNDEF;
 
 		if (TEXT_TYPE === type) {
 			return compileTextNode(node);
+		} else if (TAG_TYPE === type && isDefineElems[name]) {
+			if (compiledAttrs === UNDEF && isDefineElems[name].attrs.length) {
+				compiledAttrs = '{}';
+			}
+
+			return `${name}(${compiledAttrs})`;
 		} else {
-			let compiledName = node.compiledName || 'U';
-			let compiledAttrs = node.compiledAttrs || 'U';
+			let compiledName = node.compiledName || UNDEF;
 			let compiledChildren = compileChildren(node.children, node.hasKeywords, node.hasComputedChildren, node.computed);
 
 			if (node.computed) {
@@ -128,6 +151,22 @@ export default (options:JSONModeOptions = {}) => (bone:Bone) => {
 			if (compiledChildren instanceof Array) {
 				beforeCode += compiledChildren[0];
 				compiledChildren = compiledChildren[1];
+			}
+
+			if (DEFINE_TYPE === type) {
+				let code = `function ${name}(attrs){\n`;
+
+				if (node.attrs.length) {
+					code += 'var ' + node.attrs.map(name => `${name} = attrs.${name}`).join('\n') + '\n';
+				}
+
+				if (node.children.length === 1) {
+					code += `return ${compiledChildren}`;
+				} else {
+					code += `return {tag: U, attrs: U, children: ${compiledChildren}}`;
+				}
+
+				return `${beforeCode}${code}\n}`;
 			}
 
 			let tagCode = `{tag: ${compiledName}, attrs: ${compiledAttrs}, children: ${compiledChildren}}`;
@@ -186,27 +225,29 @@ export default (options:JSONModeOptions = {}) => (bone:Bone) => {
 				return hasKeywords ? [code, name] : code;
 			}
 		} else {
-			return 'U';
+			return UNDEF;
 		}
 	}
 
 	const rootNode = preprocessing(bone);
 	const results = compileNode(rootNode, true);
-	const globalVars = [
+	const globals = [];
+	const globalVars:string[] = [].concat(
 		'U = void 0',
-		`S = ${toStr}`
-	];
+		`S = ${toStr}`,
+		constObjects.map((code, idx) => `${constPrefix + (idx + 1)} = ${code}`)
+	);
 
-	Array.from({length: varMax}).forEach((_, i) => globalVars.push(`_$$${i + 1}`));
+	while (varMax--) {
+		globalVars.push(`_$$${varMax + 1}`);
+	}
 
-	console.log(results);
-
-	constObjects.map((code, idx) => {
-		globalVars.push(`${constPrefix + (idx + 1)} = ${code}`);
+	defineElems.forEach(node => {
+		globals.push(compileNode(node, true));
 	});
 
 	return {
-		before: `var ` + globalVars.join(',\n'),
+		before: `var ${globalVars.join(',\n')}\n${globals.join('\n')}`,
 		code: results
 	};
 };
