@@ -211,12 +211,14 @@ define([
 			'elem = []',
 			'  __default = ()',
 			'    | def',
+			'  __default()',
 			'elem',
 			'elem',
-			'  OK!'
+			'  | OK!'
 		].join('\n'));
 
-		assert.deepEqual(template({x: 'Wow!'}).children, {tag: "p", children: 'Wow!'});
-		assert.ok(template() !== template(), 'not strict equal');
+		assert.deepEqual(template().children[0], 'def');
+		assert.deepEqual(template().children[1], 'OK!');
+		assert.ok(template() === template(), 'strict equal');
 	});
 });

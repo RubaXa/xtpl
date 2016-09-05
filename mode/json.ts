@@ -27,7 +27,11 @@ interface Node {
 	children:Node[];
 	hasKeywords:boolean;
 	hasComputedChildren:boolean;
+	slots:Node[];
+	calls:string[];
+	isSlot:boolean;
 }
+
 
 export interface JSONModeOptions {
 	debug?:boolean;
@@ -41,13 +45,14 @@ export default (options:JSONModeOptions = {}) => (bone:Bone) => {
 	const UNDEF = 'U';
 	const constPrefix = '_$';
 	const constObjects = [];
-	const defineElems = [];
-	const isDefineElems = {};
+
+	const customElems = [];
+	const isCustomElems = {};
 
 	let varNum = 0;
 	let varMax = 0;
 
-	function preprocessing(bone:Bone):Node {
+	function preprocessing(bone:Bone, slots?:Node[], usedSlots?:any):Node {
 		const raw:any = bone.raw || {};
 		const type = bone.type;
 
@@ -61,35 +66,53 @@ export default (options:JSONModeOptions = {}) => (bone:Bone) => {
 		let compiledValue = TEXT_TYPE === type ? stringify(value, <Bone><any>valueDetails) : '';
 		let hasKeywords = false;
 		let hasComputedChildren = false;
+		let isCustomElem = isCustomElems[name];
 
 		const children = [];
+
+		const usedSlots = DEFINE_TYPE === type ? {} : usedSlots;
+		const overridenSlots = isCustomElem ? [] : null;
+		const defaultSlot = isCustomElem ? [] : null;
 
 		bone.nodes.forEach((childBone) => {
 			const type = childBone.type;
 
 			if (DEFINE_TYPE === type) {
 				if (childBone.raw.type === 'parenthesis') {
-					throw 'todo: define slot';
-				} else {
-					const slots = {};
 					const node = preprocessing(childBone);
 
-					defineElems.push(node);
-					isDefineElems[node.name] = node;
+					node.isSlot = true;
+					(isCustomElem ? overridenSlots : slots).push(node);
+					usedSlots[node.name] = true;
+				} else {
+					const slots = [];
+					const node = preprocessing(childBone, slots);
+
+					node.slots = slots;
+					customElems.push(node);
+					isCustomElems[node.name] = node;
 				}
 			} else {
-				const node = preprocessing(childBone);
+				const node = preprocessing(childBone, null, usedSlots);
 
 				hasKeywords = hasKeywords || KEYWORD_TYPE === type || node.hasKeywords;
 				hasComputedChildren = hasComputedChildren || node.computed;
 
-				if (HIDDEN_CLASS_TYPE === type) {
+				if (isCustomElem) {
+					defaultSlot.push(node);
+				} else if (HIDDEN_CLASS_TYPE === type) {
 					children.push.apply(children, node.children);
 				} else {
 					children.push(node);
 				}
 			}
 		});
+
+		if (isCustomElem && defaultSlot.length) {
+			const __default = preprocessing(new Bone(DEFINE_TYPE, {type: 'parenthesis', name: '__default'}), null, usedSlots);
+			__default.children = defaultSlot;
+			overridenSlots.push(__default);
+		}
 
 		return {
 			type,
@@ -110,14 +133,19 @@ export default (options:JSONModeOptions = {}) => (bone:Bone) => {
 			hasComputedValue: valueDetails.hasComputedAttrs,
 			hasComputedAttrs: (<any>bone).hasComputedAttrs,
 			hasKeywords,
-			hasComputedChildren
+			hasComputedChildren,
+			calls: usedSlots ? Object.keys(usedSlots) : null,
+			slots: overridenSlots,
+			isSlot: false
 		};
 	}
 
+	// Выделение статического объекта (todo: одинаковые блоки)
 	function allocateConstObject(code) {
 		return code === UNDEF ? code : constPrefix + constObjects.push(code);
 	}
 
+	// Компиляция подготовленной ноды
 	function compileNode(node:Node, computedParent?:boolean, childrenName?:string) {
 		const type = node.type;
 		const name = node.name;
@@ -125,14 +153,27 @@ export default (options:JSONModeOptions = {}) => (bone:Bone) => {
 		let compiledAttrs = node.compiledAttrs || UNDEF;
 
 		if (TEXT_TYPE === type) {
+			// Текст
 			return compileTextNode(node);
-		} else if (TAG_TYPE === type && isDefineElems[name]) {
-			if (compiledAttrs === UNDEF && isDefineElems[name].attrs.length) {
+		} else if (TAG_TYPE === type && isCustomElems[name]) {
+			// Пользовательский тег
+			if (compiledAttrs === UNDEF && isCustomElems[name].attrs.length) {
 				compiledAttrs = '{}';
 			}
 
-			return `${name}(${compiledAttrs})`;
+			let code = `${name}(${compiledAttrs}`;
+
+			if (node.slots.length) {
+				code += `, {${node.slots.map(slot => `${slot.name}: ${compileNode(slot, true)}`).join('\n,')}}`;
+			} else if (isCustomElems[name].calls.length) {
+				code += ', {}';
+			}
+
+			return code + ')';
+		} else if (CALL_TYPE === type) {
+			return `(typeof ${name} !== 'undefined' ? ${name} : __super.${name})()`;
 		} else {
+			// Обычные теги
 			let compiledName = node.compiledName || UNDEF;
 			let compiledChildren = compileChildren(node.children, node.hasKeywords, node.hasComputedChildren, node.computed);
 
@@ -154,7 +195,18 @@ export default (options:JSONModeOptions = {}) => (bone:Bone) => {
 			}
 
 			if (DEFINE_TYPE === type) {
-				let code = `function ${name}(attrs){\n`;
+				let code = `function ${name}(${node.isSlot ? '' : `attrs, __slots`}) {\n`;
+
+				if (node.calls.length) {
+					code += `var ${node.calls.map(name => `${name} = __slots.${name}`).join(',\n')}\n`;
+				}
+
+				if (node.slots) {
+					// todo: allocateConstObject
+					code += 'var __super = {';
+					code += node.slots.map(node => `${node.name}: ${compileNode(node, true)}`).join(',\n');
+					code += '}\n';
+				}
 
 				if (node.attrs.length) {
 					code += 'var ' + node.attrs.map(name => `${name} = attrs.${name}`).join('\n') + '\n';
@@ -242,7 +294,7 @@ export default (options:JSONModeOptions = {}) => (bone:Bone) => {
 		globalVars.push(`_$$${varMax + 1}`);
 	}
 
-	defineElems.forEach(node => {
+	customElems.forEach(node => {
 		globals.push(compileNode(node, true));
 	});
 
