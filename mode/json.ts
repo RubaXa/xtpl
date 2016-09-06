@@ -150,18 +150,19 @@ export default (options:JSONModeOptions = {}) => (bone:Bone) => {
 		const type = node.type;
 		const name = node.name;
 
+		let code;
 		let compiledAttrs = node.compiledAttrs || UNDEF;
 
 		if (TEXT_TYPE === type) {
 			// Текст
-			return compileTextNode(node);
+			code = compileTextNode(node);
 		} else if (TAG_TYPE === type && isCustomElems[name]) {
 			// Пользовательский тег
 			if (compiledAttrs === UNDEF && isCustomElems[name].attrs.length) {
 				compiledAttrs = '{}';
 			}
 
-			let code = `${name}(${compiledAttrs}`;
+			code = `${name}(${compiledAttrs}`;
 
 			if (node.slots.length) {
 				code += `, {${node.slots.map(slot => `${slot.name}: ${compileNode(slot, true)}`).join('\n,')}}`;
@@ -169,9 +170,9 @@ export default (options:JSONModeOptions = {}) => (bone:Bone) => {
 				code += ', {}';
 			}
 
-			return code + ')';
+			code += ')';
 		} else if (CALL_TYPE === type) {
-			return `(typeof ${name} !== 'undefined' ? ${name} : __super.${name})()`;
+			code = `(typeof ${name} !== 'undefined' ? ${name} : __super.${name})()`;
 		} else {
 			// Обычные теги
 			let compiledName = node.compiledName || UNDEF;
@@ -195,7 +196,7 @@ export default (options:JSONModeOptions = {}) => (bone:Bone) => {
 			}
 
 			if (DEFINE_TYPE === type) {
-				let code = `function ${name}(${node.isSlot ? '' : `attrs, __slots`}) {\n`;
+				code = `function ${name}(${node.isSlot ? '' : `attrs, __slots`}) {\n`;
 
 				if (node.calls.length) {
 					code += `var ${node.calls.map(name => `${name} = __slots.${name}`).join(',\n')}\n`;
@@ -236,6 +237,9 @@ export default (options:JSONModeOptions = {}) => (bone:Bone) => {
 
 			return beforeCode + tagCode;
 		}
+
+		// Если не вышли в `else` (да, лучше не придумалось)
+		return childrenName ? `${childrenName}.push(${code});\n` : code;
 	}
 
 	function compileTextNode({hasComputedValue, value, compiledValue}:Node) {

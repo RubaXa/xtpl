@@ -142,7 +142,14 @@ define([
 		assert.ok(template().children[0] === template().children[0], 'strict equal');
 	});
 
-	QUnit.test('FOR statement', function (assert) {
+	QUnit.test('FOR statement (text)', function (assert) {
+		const template = fromString('for (val in data)\n  | ${val}', ['data']);
+
+		assert.deepEqual(template({data: [1, 2]}).children[0], '1');
+		assert.deepEqual(template({data: [2, 3]}).children[1], '3');
+	});
+
+	QUnit.test('FOR statement (li)', function (assert) {
 		const template = fromString('ul > for (val in data)\n  li | ${val}', ['data']);
 
 		assert.deepEqual(template({data: [1, 2]}).children[0].tag, 'ul');
