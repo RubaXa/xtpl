@@ -253,4 +253,18 @@ define([
 		assert.deepEqual(template().children[1].children, 'OK!');
 		assert.ok(template() === template(), 'strict equal');
 	});
+
+	QUnit.test('panel = [title] + slot with default & arguments', function (assert) {
+		var template = fromString([
+			'panel = [title]',
+			'  content = (text, chr)',
+			'    p | ${text}${chr}',
+			'  content(title.toUpperCase(), "?")',
+			'panel[title="wow!"]'
+		].join('\n'));
+
+		assert.equal(template().children.tag, 'p');
+		assert.equal(template().children.children, 'WOW!?');
+		assert.ok(template() === template(), 'strict equal');
+	});
 });

@@ -74,6 +74,7 @@ export default (options:JSONModeOptions = {}) => (bone:Bone) => {
 		const defaultSlot = isCustomElem ? [] : null;
 
 		if (CALL_TYPE === type && usedSlots) {
+			attrs = raw.args;
 			usedSlots[name] = true;
 		}
 
@@ -155,6 +156,8 @@ export default (options:JSONModeOptions = {}) => (bone:Bone) => {
 	function compileNode(node:Node, computedParent?:boolean, childrenName?:string) {
 		const type = node.type;
 		const name = node.name;
+		const attrs = node.attrs;
+		const slots = node.slots;
 
 		let code;
 		let compiledAttrs = node.compiledAttrs || UNDEF;
@@ -170,8 +173,8 @@ export default (options:JSONModeOptions = {}) => (bone:Bone) => {
 
 			code = `${name}(${compiledAttrs}`;
 
-			if (node.slots.length) {
-				code += `, {${node.slots.map(slot => `${slot.name}: ${compileNode(slot, true)}`).join('\n,')}}`;
+			if (slots.length) {
+				code += `, {${slots.map(slot => `${slot.name}: ${compileNode(slot, true)}`).join('\n,')}}`;
 			} else if (isCustomElems[name].calls.length) {
 				code += ', {}';
 			}
@@ -182,7 +185,7 @@ export default (options:JSONModeOptions = {}) => (bone:Bone) => {
 				code = allocateConstObject(code);
 			}
 		} else if (CALL_TYPE === type) {
-			code = `(typeof ${name} !== 'undefined' ? ${name} : __super.${name} || ${RET_STR})()`;
+			code = `(typeof ${name} !== 'undefined' ? ${name} : __super.${name} || ${RET_STR})(${attrs.join(', ')})`;
 		} else {
 			// Обычные теги
 			let compiledName = node.compiledName || UNDEF;
@@ -206,21 +209,21 @@ export default (options:JSONModeOptions = {}) => (bone:Bone) => {
 			}
 
 			if (DEFINE_TYPE === type) {
-				code = `function ${name}(${node.isSlot ? '' : `attrs, __slots`}) {\n`;
+				code = `function ${name}(${node.isSlot ? attrs.join(', ') : `attrs, __slots`}) {\n`;
 
 				if (node.calls && node.calls.length) {
 					code += `var ${node.calls.map(name => `${name} = __slots.${name}`).join(',\n')}\n`;
 				}
 
-				if (node.slots) {
+				if (slots) {
 					// todo: allocateConstObject
 					code += 'var __super = {';
-					code += node.slots.map(node => `${node.name}: ${compileNode(node, true)}`).join(',\n');
+					code += slots.map(node => `${node.name}: ${compileNode(node, true)}`).join(',\n');
 					code += '}\n';
 				}
 
-				if (node.attrs.length) {
-					code += 'var ' + node.attrs.map(name => `${name} = attrs.${name}`).join('\n') + '\n';
+				if (!node.isSlot && attrs.length) {
+					code += 'var ' + attrs.map(name => `${name} = attrs.${name}`).join('\n') + '\n';
 				}
 
 				if (node.children.length === 1) {
