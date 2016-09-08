@@ -43,6 +43,7 @@ function toStr(v) {
 
 export default (options:JSONModeOptions = {}) => (bone:Bone) => {
 	const UNDEF = 'U';
+	const RET_STR = 'RET_STR';
 	const constPrefix = '_$';
 	const constObjects = [];
 
@@ -69,10 +70,12 @@ export default (options:JSONModeOptions = {}) => (bone:Bone) => {
 		let isCustomElem = isCustomElems[name];
 
 		const children = [];
-
-		const usedSlots = DEFINE_TYPE === type ? {} : usedSlots;
 		const overridenSlots = isCustomElem ? [] : null;
 		const defaultSlot = isCustomElem ? [] : null;
+
+		if (CALL_TYPE === type && usedSlots) {
+			usedSlots[name] = true;
+		}
 
 		bone.nodes.forEach((childBone) => {
 			const type = childBone.type;
@@ -83,12 +86,15 @@ export default (options:JSONModeOptions = {}) => (bone:Bone) => {
 
 					node.isSlot = true;
 					(isCustomElem ? overridenSlots : slots).push(node);
-					usedSlots[node.name] = true;
+					usedSlots && (usedSlots[node.name] = true);
 				} else {
+					usedSlots = {};
+
 					const slots = [];
-					const node = preprocessing(childBone, slots);
+					const node = preprocessing(childBone, slots, usedSlots);
 
 					node.slots = slots;
+					node.calls = Object.keys(usedSlots);
 					customElems.push(node);
 					isCustomElems[node.name] = node;
 				}
@@ -134,7 +140,7 @@ export default (options:JSONModeOptions = {}) => (bone:Bone) => {
 			hasComputedAttrs: (<any>bone).hasComputedAttrs,
 			hasKeywords,
 			hasComputedChildren,
-			calls: usedSlots ? Object.keys(usedSlots) : null,
+			calls: null,
 			slots: overridenSlots,
 			isSlot: false
 		};
@@ -171,8 +177,12 @@ export default (options:JSONModeOptions = {}) => (bone:Bone) => {
 			}
 
 			code += ')';
+
+			if (!node.computed) {
+				code = allocateConstObject(code);
+			}
 		} else if (CALL_TYPE === type) {
-			code = `(typeof ${name} !== 'undefined' ? ${name} : __super.${name})()`;
+			code = `(typeof ${name} !== 'undefined' ? ${name} : __super.${name} || ${RET_STR})()`;
 		} else {
 			// Обычные теги
 			let compiledName = node.compiledName || UNDEF;
@@ -198,7 +208,7 @@ export default (options:JSONModeOptions = {}) => (bone:Bone) => {
 			if (DEFINE_TYPE === type) {
 				code = `function ${name}(${node.isSlot ? '' : `attrs, __slots`}) {\n`;
 
-				if (node.calls.length) {
+				if (node.calls && node.calls.length) {
 					code += `var ${node.calls.map(name => `${name} = __slots.${name}`).join(',\n')}\n`;
 				}
 
@@ -291,6 +301,7 @@ export default (options:JSONModeOptions = {}) => (bone:Bone) => {
 	const globalVars:string[] = [].concat(
 		'U = void 0',
 		`S = ${toStr}`,
+		`RET_STR = function () { return '' }`,
 		constObjects.map((code, idx) => `${constPrefix + (idx + 1)} = ${code}`)
 	);
 

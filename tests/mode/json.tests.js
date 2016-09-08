@@ -202,14 +202,22 @@ define([
 	});
 
 	QUnit.test('elem = [text] (interpolate)', function (assert) {
+		var data = {x: 'Wow!'}
 		var template = fromString([
 			'elem = [text]',
 			'  p | ${text}',
+			'elem[text="OK"]',
 			'elem[text="${x}"]'
 		].join('\n'), ['x']);
 
-		assert.deepEqual(template({x: 'Wow!'}).children.tag, 'p');
-		assert.deepEqual(template({x: 'Wow!'}).children.children, 'Wow!');
+		assert.deepEqual(template(data).children[0].tag, 'p');
+		assert.deepEqual(template(data).children[0].children, 'OK');
+
+		assert.deepEqual(template(data).children[1].tag, 'p');
+		assert.deepEqual(template(data).children[1].children, 'Wow!');
+
+		assert.ok(template(data).children[0] === template(data).children[0], '0: strict equal');
+		assert.ok(template(data).children[1] !== template(data).children[1], '0: not strict equal');
 		assert.ok(template() !== template(), 'not strict equal');
 	});
 
@@ -226,6 +234,23 @@ define([
 
 		assert.deepEqual(template().children[0], 'def');
 		assert.deepEqual(template().children[1], 'OK!');
+		assert.ok(template() === template(), 'strict equal');
+	});
+
+	QUnit.test('elem = [] + slot without default content', function (assert) {
+		var template = fromString([
+			'elem = []',
+			'  p > content()',
+			'elem',
+			'elem',
+			'  content = ()',
+			'    | OK!'
+		].join('\n'));
+
+		assert.deepEqual(template().children[0].tag, 'p');
+		assert.deepEqual(template().children[0].children, '');
+		assert.deepEqual(template().children[1].tag, 'p');
+		assert.deepEqual(template().children[1].children, 'OK!');
 		assert.ok(template() === template(), 'strict equal');
 	});
 });

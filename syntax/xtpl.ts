@@ -586,7 +586,7 @@ export default <SkeletikParser>skeletik({
 		'': (lex, bone) => {
 			bone.type = CALL_TYPE;
 			bone.raw.args = parseJSCallArgs(lex);
-			return ENTRY_GROUP;
+			return ENTRY_STOPPER_AWAIT;
 		}
 	}
 }, {

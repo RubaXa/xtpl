@@ -972,4 +972,17 @@ define(['qunit', 'xtpl/syntax/xtpl', '../qunit.assert.fragEqual'], function (QUn
 
 		testMe('#|foo <a href=".." class="foo bar">bar</a> qux|#');
 	});
+
+	QUnit.test('elem = [] + slot without default content', function (assert) {
+		var frag = xtplParser([
+			'elem = []',
+			'  p > content()',
+			'elem'
+		].join('\n'));
+		
+		assert.equal(frag.length, 2);
+		assert.equal(frag.first.length, 1);
+		assert.equal(frag.first.first.length, 1);
+		assert.equal(frag.last.length, 0);
+	});
 });
