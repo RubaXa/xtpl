@@ -311,6 +311,22 @@ define([
 		assert.ok(template(data).children[0] === template(data).children[0], '0: strict equal');
 		assert.ok(template(data).children[1] !== template(data).children[1], '1: not strict equal');
 		assert.ok(template(data).children[2] === template(data).children[2], '2: strict equal');
-		assert.ok(template(data) !== template(data), 'strict equal');
+		assert.ok(template(data) !== template(data), 'not strict equal');
+	});
+
+	QUnit.test('panel = [title] + super', function (assert) {
+		var template = fromString([
+			'panel = [title]',
+			'  content(title)',
+			'  content = (text)',
+			'    | ${text.toUpperCase()}',
+			'panel[title="xyz"]',
+			'  content = (text)',
+			'    p > super.content(text) + | !'
+		].join('\n'));
+
+		assert.equal(template().children.tag, 'p');
+		assert.equal(template().children.children.join(''), 'XYZ!');
+		assert.ok(template() === template(), 'strict equal');
 	});
 });

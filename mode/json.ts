@@ -37,6 +37,8 @@ export interface JSONModeOptions {
 	debug?:boolean;
 }
 
+const R_SUPER_CALL = /^super\./;
+
 function toStr(v) {
 	return v == null ? '' : (v + '');
 }
@@ -73,9 +75,9 @@ export default (options:JSONModeOptions = {}) => (bone:Bone) => {
 		const overridenSlots = isCustomElem ? [] : null;
 		const defaultSlot = isCustomElem ? [] : null;
 
-		if (CALL_TYPE === type && usedSlots) {
+		if (CALL_TYPE === type) {
 			attrs = raw.args;
-			usedSlots[name] = true;
+			usedSlots && (usedSlots[name] = true);
 		}
 
 		bone.nodes.forEach((childBone) => {
@@ -193,7 +195,11 @@ export default (options:JSONModeOptions = {}) => (bone:Bone) => {
 				code = allocateConstObject(code);
 			}
 		} else if (CALL_TYPE === type) {
-			code = `(typeof ${name} !== 'undefined' ? ${name} : __super.${name} || ${RET_STR})(${attrs.join(', ')})`;
+			if (R_SUPER_CALL.test(name)) {
+				code = `__${name}(null, ${attrs.join(', ')})`;
+			} else {
+				code = `(typeof ${name} !== 'undefined' ? ${name} : __super.${name} || ${RET_STR})(${[].concat('__super', attrs).join(', ')})`;
+			}
 		} else {
 			// Обычные теги
 			let compiledName = node.compiledName || UNDEF;
@@ -217,7 +223,7 @@ export default (options:JSONModeOptions = {}) => (bone:Bone) => {
 			}
 
 			if (DEFINE_TYPE === type) {
-				code = `function ${name}(${node.isSlot ? attrs.join(', ') : `attrs, __slots`}) {\n`;
+				code = `function ${name}(${node.isSlot ? [].concat('__super', attrs).join(', ') : `attrs, __slots`}) {\n`;
 
 				if (node.calls && node.calls.length) {
 					code += `var ${node.calls.map(name => `${name} = __slots.${name}`).join(',\n')}\n`;
