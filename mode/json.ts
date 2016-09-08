@@ -83,12 +83,16 @@ export default (options:JSONModeOptions = {}) => (bone:Bone) => {
 
 			if (DEFINE_TYPE === type) {
 				if (childBone.raw.type === 'parenthesis') {
+					// Определение слота
 					const node = preprocessing(childBone);
 
 					node.isSlot = true;
 					(isCustomElem ? overridenSlots : slots).push(node);
 					usedSlots && (usedSlots[node.name] = true);
+
+					hasComputedChildren = hasComputedChildren || node.computed;
 				} else {
+					// Создание custom-элемента
 					usedSlots = {};
 
 					const slots = [];
@@ -169,6 +173,10 @@ export default (options:JSONModeOptions = {}) => (bone:Bone) => {
 			// Пользовательский тег
 			if (compiledAttrs === UNDEF && isCustomElems[name].attrs.length) {
 				compiledAttrs = '{}';
+			}
+
+			if (node.computed && !node.hasComputedAttrs) {
+				compiledAttrs = allocateConstObject(compiledAttrs);
 			}
 
 			code = `${name}(${compiledAttrs}`;

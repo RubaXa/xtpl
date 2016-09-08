@@ -267,4 +267,50 @@ define([
 		assert.equal(template().children.children, 'WOW!?');
 		assert.ok(template() === template(), 'strict equal');
 	});
+
+	QUnit.test('panel = [title] + slot without content, but with arguments', function (assert) {
+		var template = fromString([
+			'panel = [title]',
+			'  content(title.toUpperCase(), "?")',
+			'panel[title="wow!"]',
+			'  content = (text, chr)',
+			'    p | ${text}${chr}'
+		].join('\n'));
+
+		assert.equal(template().children.tag, 'p');
+		assert.equal(template().children.children, 'WOW!?');
+		assert.ok(template() !== template(), 'strict equal');
+
+	});
+
+	QUnit.test('panel = [title] interpolate', function (assert) {
+		var data = {x: 'ok'};
+		var template = fromString([
+			'panel = [title]',
+			'  content = (text, chr)',
+			'    p | ${text}${chr}',
+			'  content(title && title.toUpperCase(), "?")',
+			'panel[title="wow!"]',
+			'panel',
+			'  content = ()',
+			'    i | ${x}',
+			'panel',
+			'  content = ()',
+			'    b | const',
+			'panel[title="!"]',
+			'  content = (text, chr)',
+			'    | ${chr}${text}'
+		].join('\n'), ['x']);
+
+		assert.equal(template(data).children[0].tag, 'p');
+		assert.equal(template(data).children[0].children, 'WOW!?');
+		assert.equal(template(data).children[1].children, 'ok');
+		assert.equal(template(data).children[2].children, 'const');
+		assert.equal(template(data).children[3], '?!');
+
+		assert.ok(template(data).children[0] === template(data).children[0], '0: strict equal');
+		assert.ok(template(data).children[1] !== template(data).children[1], '1: not strict equal');
+		assert.ok(template(data).children[2] === template(data).children[2], '2: strict equal');
+		assert.ok(template(data) !== template(data), 'strict equal');
+	});
 });
