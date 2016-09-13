@@ -4,7 +4,7 @@ import * as utils from './utils';
 // Shortcut codes
 const QUOTE_CODE = utils.QUOTE_CODE; // "
 const MINUS_CODE = utils.MINUS_CODE; // -
-const CLOSE_BRACKET_CODE = utils.CLOSE_BRACKET_CODE; // ] 
+const CLOSE_BRACKET_CODE = utils.CLOSE_BRACKET_CODE; // ]
 
 let slashes = 0;
 let attrName;

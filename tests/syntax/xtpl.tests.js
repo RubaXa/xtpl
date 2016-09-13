@@ -139,10 +139,33 @@ define(['qunit', 'xtpl/syntax/xtpl', '../qunit.assert.fragEqual'], function (QUn
 		testMe('#${foo}${bar}');
 	});
 
+	QUnit.test('.foo', function (assert) {
+		function testMe(tpl) {
+			var frag = xtplParser(tpl);
+
+			assert.equal(frag.length, 1, tpl);
+			assert.equal(frag.first.type, 'tag');
+			assert.fragEqual(frag.first.raw, {name: 'div', attrs: {class: 'foo'}});
+		}
+
+		testMe('.foo');
+		testMe('.foo{}');
+		testMe('.foo {}');
+	});
+
+	QUnit.test('.foo.', function (assert) {
+		try {
+			xtplParser('.foo.');
+			assert.ok(false);
+		} catch (err) {
+			assert.equal(err.pretty, '.foo.\n----^');
+		}
+	});
+
 	QUnit.test('div | #foo | .foo + comment', function (assert) {
 		function testMe(tpl, attrs) {
 			var frag = xtplParser(tpl);
-			
+
 			assert.equal(frag.length, 2, tpl);
 			assert.equal(frag.first.type, 'tag');
 			assert.fragEqual(frag.first.raw, {name: 'div', attrs: attrs});
@@ -158,20 +181,6 @@ define(['qunit', 'xtpl/syntax/xtpl', '../qunit.assert.fragEqual'], function (QUn
 
 		testMe('.foo//bar', {class: 'foo'});
 		testMe('.foo // bar', {class: 'foo'});
-	});
-
-	QUnit.test('.foo', function (assert) {
-		function testMe(tpl) {
-			var frag = xtplParser(tpl);
-			
-			assert.equal(frag.length, 1, tpl);
-			assert.equal(frag.first.type, 'tag');
-			assert.fragEqual(frag.first.raw, {name: 'div', attrs: {class: 'foo'}});
-		}
-
-		testMe('.foo');
-		testMe('.foo{}');
-		testMe('.foo {}');
 	});
 
 	QUnit.test('.${foo}', function (assert) {

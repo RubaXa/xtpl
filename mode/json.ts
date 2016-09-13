@@ -1,7 +1,7 @@
-import {Bone} from 'skeletik';
-import {
+import xtpl, {IBone, BoneConstructor} from '../xtpl';
+
+const {
 	ROOT_TYPE,
-	DTD_TYPE,
 	COMMENT_TYPE,
 	TEXT_TYPE,
 	KEYWORD_TYPE,
@@ -9,9 +9,13 @@ import {
 	HIDDEN_CLASS_TYPE,
 	DEFINE_TYPE,
 	CALL_TYPE,
-} from '../syntax/utils';
-import {compile as compileKeyword} from '../src/keywords';
-import {stringify, stringifyAttr, stringifyObjectKey} from '../src/utils';
+} = xtpl.syntaxUtils;
+
+const {
+	stringify,
+	stringifyAttr,
+	stringifyObjectKey
+} = xtpl.utils;
 
 interface Node {
 	type:string;
@@ -32,20 +36,16 @@ interface Node {
 	isSlot:boolean;
 }
 
-
 export interface JSONModeOptions {
 	debug?:boolean;
 }
 
 const R_SUPER_CALL = /^super\./;
 
-function toStr(v) {
-	return v == null ? '' : (v + '');
-}
-
-export default (options:JSONModeOptions = {}) => (bone:Bone) => {
-	const UNDEF = 'U';
-	const RET_STR = 'RET_STR';
+export default (options:JSONModeOptions = {}) => (bone:IBone, BoneClass:BoneConstructor) => {
+	const UNDEF = '__STDLIB_NIL';
+	const TO_STR = '__STDLIB_TO_STRING';
+	const RET_STR = '__STDLIB_RETURN_EMPTY_STRING';
 	const constPrefix = '_$';
 	const constObjects = [];
 
@@ -55,18 +55,18 @@ export default (options:JSONModeOptions = {}) => (bone:Bone) => {
 	let varNum = 0;
 	let varMax = 0;
 
-	function preprocessing(bone:Bone, slots?:Node[], usedSlots?:any):Node {
+	function preprocessing(bone:IBone, slots?:Node[], usedSlots?:any):Node {
 		const raw:any = bone.raw || {};
 		const type = bone.type;
 
 		let name = raw.name;
 		let nameDetails = {hasComputedAttrs: false};
-		let compiledName = stringify(name, <Bone><any>nameDetails);
+		let compiledName = stringify(name, TO_STR, <IBone><any>nameDetails);
 		let attrs = raw.attrs || {};
-		let compiledAttrs = Object.keys(attrs).map((name:string) => `${stringifyObjectKey(name)}: ${stringifyAttr(name, attrs[name], bone)}`);
+		let compiledAttrs = Object.keys(attrs).map((name:string) => `${stringifyObjectKey(name)}: ${stringifyAttr(name, attrs[name], TO_STR, bone)}`);
 		let value = raw.value;
 		let valueDetails = {hasComputedAttrs: false};
-		let compiledValue = TEXT_TYPE === type ? stringify(value, <Bone><any>valueDetails) : '';
+		let compiledValue = TEXT_TYPE === type ? stringify(value, TO_STR, <IBone><any>valueDetails) : '';
 		let hasKeywords = false;
 		let hasComputedChildren = false;
 		let isCustomElem = isCustomElems[name];
@@ -80,7 +80,7 @@ export default (options:JSONModeOptions = {}) => (bone:Bone) => {
 			usedSlots && (usedSlots[name] = true);
 		}
 
-		bone.nodes.forEach((childBone) => {
+		bone.nodes.forEach((childBone:IBone) => {
 			const type = childBone.type;
 
 			if (DEFINE_TYPE === type) {
@@ -122,7 +122,7 @@ export default (options:JSONModeOptions = {}) => (bone:Bone) => {
 		});
 
 		if (isCustomElem && defaultSlot.length) {
-			const __default = preprocessing(new Bone(DEFINE_TYPE, {type: 'parenthesis', name: '__default'}), null, usedSlots);
+			const __default = preprocessing(new BoneClass(DEFINE_TYPE, {type: 'parenthesis', name: '__default'}), null, usedSlots);
 			__default.children = defaultSlot;
 			overridenSlots.push(__default);
 		}
@@ -171,6 +171,9 @@ export default (options:JSONModeOptions = {}) => (bone:Bone) => {
 		if (TEXT_TYPE === type) {
 			// Текст
 			code = compileTextNode(node);
+		} else if (COMMENT_TYPE === type) {
+			// Комментарий
+			code = `{tag: '!', children: ${node.compiledValue}}`;
 		} else if (TAG_TYPE === type && isCustomElems[name]) {
 			// Пользовательский тег
 			if (compiledAttrs === UNDEF && isCustomElems[name].attrs.length) {
@@ -271,7 +274,7 @@ export default (options:JSONModeOptions = {}) => (bone:Bone) => {
 
 	function compileTextNode({hasComputedValue, value, compiledValue}:Node) {
 		if (hasComputedValue) {
-			return `S(${compiledValue})`;
+			return compiledValue;
 		} else {
 			return value === compiledValue ? `${value} + ""` : compiledValue;
 		}
@@ -293,7 +296,7 @@ export default (options:JSONModeOptions = {}) => (bone:Bone) => {
 					}
 
 					if (KEYWORD_TYPE === node.type) {
-						const pair = compileKeyword(node.name, node.attrs);
+						const pair = xtpl.keywords.compile(node.name, node.attrs);
 						code += '\n' + pair[0] + '\n';
 						code += node.children.map(child => compileNode(child, true, name)).join('\n');
 						code += pair[1] + '\n';
@@ -316,9 +319,6 @@ export default (options:JSONModeOptions = {}) => (bone:Bone) => {
 	const results = compileNode(rootNode, true);
 	const globals = [];
 	const globalVars:string[] = [].concat(
-		'U = void 0',
-		`S = ${toStr}`,
-		`RET_STR = function () { return '' }`,
 		constObjects.map((code, idx) => `${constPrefix + (idx + 1)} = ${code}`)
 	);
 
@@ -331,7 +331,7 @@ export default (options:JSONModeOptions = {}) => (bone:Bone) => {
 	});
 
 	return {
-		before: `var ${globalVars.join(',\n')}\n${globals.join('\n')}`,
+		before: (globalVars.length ? `var ${globalVars.join(',\n')}\n` : '') + globals.join('\n'),
 		code: results
 	};
 };

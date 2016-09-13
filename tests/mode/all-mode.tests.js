@@ -51,11 +51,11 @@ define([
 	}
 
 	function test(title, templateSource, scope, expectedHTML) {
-		var fragment = xtpl.parse(templateSource);
-
 		expectedHTML = [].concat(expectedHTML);
 
 		QUnit.test(title + ' -> ' + templateSource, function (assert) {
+			var fragment = xtpl.parse(templateSource);
+
 			[].concat(scope).forEach(function (scope, idx) {
 				Object.keys(MODE).forEach(function (name) {
 					var templateFactory = xtpl.compile(fragment, {
@@ -166,6 +166,6 @@ define([
 			'btn[text="${text}" url="${href}"]'
 		].join('\n'),
 		[{text: 'Wow!', href: null}, {text: 'LOL!', href: 'domain.com'}],
-		['<button class=\"btn\" href=\"null\">Wow!</button>', '<a class=\"btn\" href=\"domain.com\">LOL!</a>']
+		['<button class=\"btn\" href=\"\">Wow!</button>', '<a class=\"btn\" href=\"domain.com\">LOL!</a>']
 	);
 });

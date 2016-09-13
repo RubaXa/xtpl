@@ -1,11 +1,11 @@
-import {Bone} from 'skeletik';
+import {IBone} from 'skeletik';
 import {EXPRESSION_TYPE, INHERIT_TYPE, GROUP_TYPE} from '../syntax/utils';
 
 const R_QUOTE_START = /^"/;
 const R_QUOTE_END = /"$/;
 
 const R_IS_OBJECT_KEY_NORMAL = /^[a-z0-9$_]+$/i;
-const R_IS_OBJECT_VALUE_PRIMITIVE = /^(((\+|-|~~)?(\d+\.?\d*|\.\d+)( *\| *0)?)|true|false|null)$/;
+//const R_IS_OBJECT_VALUE_PRIMITIVE = /^(((\+|-|~~)?(\d+\.?\d*|\.\d+)( *\| *0)?)|true|false|null)$/;
 
 const jsonStringify = JSON.stringify;
 
@@ -13,9 +13,9 @@ export function stringifyObjectKey(key:string):string {
 	return R_IS_OBJECT_KEY_NORMAL.test(key) ? key : `"${key}"`;
 }
 
-export function stringify(value:string, bone?:Bone):string;
-export function stringify(values:any[], bone?:Bone):string;
-export function stringify(values, bone) {
+export function stringify(value:string, escape?:string, bone?:IBone):string;
+export function stringify(values:any[], escape?:string, bone?:IBone):string;
+export function stringify(values, escape, bone) {
 	let value = values;
 
 	if (bone === void 0) {
@@ -25,7 +25,7 @@ export function stringify(values, bone) {
 	if (values != null) {
 		switch (values.type) {
 			case GROUP_TYPE:
-				value = `(${values.test} ? ${stringify(values.raw, bone)} : "")`;
+				value = `(${values.test} ? ${stringify(values.raw, escape, bone)} : "")`;
 				bone.hasComputedAttrs = true;
 				break;
 
@@ -37,17 +37,18 @@ export function stringify(values, bone) {
 					!selfMode && (target = target.parent);
 
 					if (target.raw.attrs.class) {
-						value = stringify(target.raw.attrs.class[0], target);
+						value = stringify(target.raw.attrs.class[0], escape, target);
 						break;
 					}
 
 					selfMode && (target = target.parent);
 				} while (1);
+
 				bone.hasComputedAttrs = bone.hasComputedAttrs || target.hasComputedAttrs;
 				break;
 
 			case EXPRESSION_TYPE:
-				value = `(${values.raw})`;
+				value = (escape ? escape : '') + `(${values.raw})`;
 				bone.hasComputedAttrs = true;
 				break;
 		
@@ -56,11 +57,11 @@ export function stringify(values, bone) {
 					value = jsonStringify(values);
 				} else {
 					const length = values.length;
-					value = stringify(values[0], bone);
+					value = stringify(values[0], escape, bone);
 
 					if (length > 1) {
 						for (let i = 1; i < length; i++) {
-							const nextValue = stringify(values[i], bone);
+							const nextValue = stringify(values[i], escape, bone);
 							
 							if (R_QUOTE_END.test(value) && R_QUOTE_START.test(nextValue)) {
 								value = value.slice(0, -1) + nextValue.slice(1);
@@ -77,15 +78,15 @@ export function stringify(values, bone) {
 	return value;
 }
 
-export function stringifyAttr(name:string, values:any[], bone?:Bone):string {
+export function stringifyAttr(name:string, values:any[], escape?:string, bone?:IBone):string {
 	const length = values.length;
 	const glue = name === 'class' ? ' ' : '';
 	
-	let value = stringify(values[0], bone);
+	let value = stringify(values[0], escape, bone);
 
 	if (length > 1) {
 		for (let i = 1; i < length; i++) {
-			let nextValue = stringify(values[i], bone);
+			let nextValue = stringify(values[i], escape, bone);
 			
 			if (i > 0) {
 				if (R_QUOTE_END.test(value)) {

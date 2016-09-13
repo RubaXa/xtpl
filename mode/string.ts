@@ -1,6 +1,7 @@
-import {Bone} from 'skeletik';
-import xtplParser from '../syntax/xtpl';
-import {
+import xtpl, {IBone, BoneConstructor} from '../xtpl';
+
+const {
+	ROOT_TYPE,
 	DTD_TYPE,
 	COMMENT_TYPE,
 	TEXT_TYPE,
@@ -9,9 +10,9 @@ import {
 	DEFINE_TYPE,
 	CALL_TYPE,
 	QUOTE_CODE
-} from '../syntax/utils';
-import {compile as compileKeyword} from '../src/keywords';
-import {stringify, stringifyAttr} from '../src/utils';
+} = xtpl.syntaxUtils;
+
+const {stringify, stringifyAttr} = xtpl.utils;
 
 const SHORT = {
 	area: 1, base: 1, br: 1, col: 1, command: 1, embed: 1, hr: 1, img: 1,
@@ -20,20 +21,21 @@ const SHORT = {
 
 export interface StringModeOptions {
 	prettify?:boolean;
+	comment?:boolean;
 }
 
-export default (options:StringModeOptions = {}) => (node:Bone) => {
+export default (options:StringModeOptions = {}) => (node:IBone, BoneClass:BoneConstructor) => {
 	const {prettify} = options;
 	const NL = prettify ? '\n' : '';
 	const CUSTOM_ELEMENTS = {};
 	const customElemets = [];
 
 	function push(value:string, raw?:boolean):string {
-		return `__ROOT += ${raw ? value : stringify(value)};\n`;
+		return `__ROOT += ${raw ? value : stringify(value, '__STDLIB_HTML_ENCODE')};\n`;
 	}
 
 	function pushAttr(name, values, bone):string {
-		let value = stringifyAttr(name, values, bone);
+		let value = stringifyAttr(name, values, '__STDLIB_HTML_ENCODE', bone);
 
 		value = (value.charCodeAt(0) === QUOTE_CODE) ? `"\\${value}` : `"\\"" + ${value}`;
 		value = (value.charCodeAt(value.length - 1) === QUOTE_CODE) ? `${value.slice(0, -1)}\\""` : `${value} + "\\""`;
@@ -41,9 +43,9 @@ export default (options:StringModeOptions = {}) => (node:Bone) => {
 		return push(value, true);
 	}
 
-	function compileSlots(nodes:Bone[]):string {
+	function compileSlots(nodes:IBone[]):string {
 		let defines = [];
-		let defaultSlot = new Bone(DEFINE_TYPE, {
+		let defaultSlot = new BoneClass(DEFINE_TYPE, {
 			name: '__default',
 			type: 'parenthesis',
 			attrs: [],
@@ -71,15 +73,15 @@ export default (options:StringModeOptions = {}) => (node:Bone) => {
 		const type = node.type;
 		let name = raw.name;
 		let code = '';
-		let innerCallList = [];
+		let innerCallList = DEFINE_TYPE === type ? [] : callList;
 		let innerDefaultSlotsList = (DEFINE_TYPE === type && raw.type === 'bracket') ? {} : defaultSlots;
 
 		if (!prettify) {
 			pad = '';
 		}
 
-		if (type === 'dtd') {
-			code = push(`<!DOCTYPE ${raw.value}>${NL}`);
+		if (DTD_TYPE === type) {
+			code = push(`<!DOCTYPE ${raw.value == 5 ? 'html' : raw.value}>${NL}`);
 		} else {
 			let hasText = false;
 			let content = node.nodes.map(function (child) {
@@ -93,10 +95,10 @@ export default (options:StringModeOptions = {}) => (node:Bone) => {
 				content = push(NL) + content + push(pad);
 			}
 
-			if (type === '#root') {
+			if (ROOT_TYPE === type) {
 				code = content;
 			} else if (KEYWORD_TYPE === type) {
-				const pair = compileKeyword(name, raw.attrs);
+				const pair = xtpl.keywords.compile(name, raw.attrs);
 				code = pair[0] + content + pair[1];
 			} else if (CALL_TYPE === type) {
 				callList.push(name);
@@ -148,7 +150,7 @@ export default (options:StringModeOptions = {}) => (node:Bone) => {
 			} else if (TEXT_TYPE === type) {
 				code = push(raw.value);
 			} else if (COMMENT_TYPE === type) {
-				code = push(`${pad}<!--${raw.value}-->${NL}`);
+				code = options.comment ? push(`${pad}<!--${raw.value}-->${NL}`) : NL;
 			} else if (HIDDEN_CLASS_TYPE === type) {
 				code = content + NL;
 			} else if (CUSTOM_ELEMENTS[name]) {

@@ -65,8 +65,8 @@ export function addCDATA(parent:Bone, value:string):void {
 	add(parent, CDATA_TYPE, {value: value});
 }
 
-export function fail(lex:Lexer, bone:Bone):void {
-	lex.error(`Invalid character \`${lex.getChar()}\`, state: ${lex.state}`, bone);
+export function fail(lex:Lexer, bone:Bone, columnOffset?:number):void {
+	lex.error(`Invalid character \`${lex.getChar()}\`, state: ${lex.state}`, bone, columnOffset);
 }
 
 export function parseJS(lex:Lexer, stopper:number, initialOffset:number = 0) {

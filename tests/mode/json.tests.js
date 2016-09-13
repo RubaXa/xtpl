@@ -23,17 +23,17 @@ define([
 		var template = fromString('|foo');
 
 		assert.codeEqual(template, 'return _$1');
-		assert.deepEqual(template(), {children: 'foo', attrs: void 0, tag: void 0});
+		assert.deepEqual(template(), {children: 'foo', attrs: null, tag: null});
 		assert.ok(template() === template(), 'strict equal');
 	});
 
 	QUnit.test('динамическая текстовая нода', function (assert) {
 		const template = fromString('|${x}', ['x']);
 
-		assert.deepEqual(template({x: null}), {children: '', tag: void 0, attrs: void 0});
-		assert.deepEqual(template({x: 1}), {children: '1', tag: void 0, attrs: void 0});
-		assert.deepEqual(template({x: 'foo'}), {children: 'foo', tag: void 0, attrs: void 0});
-		assert.deepEqual(template({x: 'bar'}), {children: 'bar', tag: void 0, attrs: void 0});
+		assert.deepEqual(template({x: null}), {children: '', tag: null, attrs: null});
+		assert.deepEqual(template({x: 1}), {children: '1', tag: null, attrs: null});
+		assert.deepEqual(template({x: 'foo'}), {children: 'foo', tag: null, attrs: null});
+		assert.deepEqual(template({x: 'bar'}), {children: 'bar', tag: null, attrs: null});
 		assert.ok(template() !== template(), 'not strict equal');
 	});
 
@@ -41,7 +41,7 @@ define([
 		const template = fromString('.foo');
 
 		assert.codeEqual(template, 'return _$1');
-		assert.deepEqual(template(), {children: {tag: 'div', attrs: {class:'foo'}, children: void 0}, tag: void 0, attrs: void 0});
+		assert.deepEqual(template(), {children: {tag: 'div', attrs: {class:'foo'}, children: null}, tag: null, attrs: null});
 		assert.ok(template() === template(), 'strict equal');
 	});
 

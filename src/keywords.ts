@@ -1,16 +1,10 @@
-import {Bone} from 'skeletik';
 import {keywords as parserKeywords} from '../syntax/xtpl';
 
 export type jscode = [string, string];
-
 export const keywords = {};
 
 export interface XKeywordOptions {
 	optionalDetails?:boolean;
-}
-
-function replace(preset:string, attrs:any):string {
-	return preset.replace(/\$([a-z0-9_-]+)/i, (_, name) => attrs[name]);
 }
 
 export function register(name:string, details:string|string[], convertTo:(attrs:any) => jscode, options:XKeywordOptions = {}) {
@@ -33,6 +27,6 @@ keywords['else'] = ({test}) => [
 ];
 
 keywords['for'] = ({data, as, key}) => [
-	`XTPL_STD_EACH(${data}, function EACH_ITERATOR(${as}, ${key || '$index'}) {`,
+	`__STDLIB_EACH(${data}, function EACH_ITERATOR(${as}, ${key || '$index'}) {`,
 	'});'
 ];

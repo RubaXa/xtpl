@@ -5,7 +5,9 @@
   "main": "dist/xtpl.js",
   "scripts": {
     "test": "ntsc && node tests/index.js",
-	"prepublish": "ntsc"
+    "build": "ntsc --module es6 && node build.js",
+    "prepublish": "ntsc",
+    "push": "npm publish --registry=https://registry.npmjs.org/"
   },
   "files": [
     "README.md",
@@ -29,6 +31,9 @@
   },
   "homepage": "https://github.com/RubaXa/xtpl#readme",
   "devDependencies": {
-    "skeletik": "^0.3.0"
+    "rollup": "^0.34.13",
+    "rollup-plugin-commonjs": "^4.1.0",
+    "rollup-plugin-node-resolve": "^2.0.0",
+    "skeletik": "^0.4.0"
   }
 }

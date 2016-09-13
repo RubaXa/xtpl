@@ -7,14 +7,15 @@ define(['qunit', 'xtpl/src/utils', 'xtpl/syntax/xtpl'], function (QUnit, utils, 
 	xtplParser = xtplParser['default'];
 
 	QUnit.test('tagName.stringify', function (assert) {
-		function testMe(tpl, expected) {
+		function testMe(tpl, expected, escape) {
 			var frag = xtplParser(tpl);
-			assert.equal(utils.stringify(frag.first.raw.name), expected, tpl);
+			assert.equal(utils.stringify(frag.first.raw.name, escape), expected, tpl);
 		}
 
 		testMe('div', '"div"');
 		testMe('${attrs.name}', '(attrs.name)');
 		testMe('element-${attrs.name}', '"element-" + (attrs.name)');
+		testMe('element-${attrs.name}', '"element-" + XXX(attrs.name)', 'XXX');
 	});
 
 	QUnit.test('class.stringify', function (assert) {

@@ -1,16 +1,34 @@
-import {Bone} from 'skeletik';
+import {IBone, BoneConstructor} from 'skeletik';
 import xtplParser from './syntax/xtpl';
 import stdLib from './src/std';
+import * as utils from './src/utils';
+import * as syntaxUtils from './syntax/utils';
+import * as keywords from './src/keywords';
 
-export interface XCompileOptions {
-	mode:any;
+export interface IOptions {
+	mode:(fragment:IBone, BoneClass?:BoneConstructor) => IArtifact;
 	scope?:string[];
+}
+
+export interface IArtifact {
+	before?:string;
+	code:string;
+	after?:string;
 }
 
 export type template<T> = (__SCOPE__:any) => T;
 
+export {
+	IBone,
+	BoneConstructor,
+}
+
 export default {
-	parse(input:string):Bone {
+	utils,
+	syntaxUtils,
+	keywords,
+
+	parse(input:string):IBone {
 		try {
 			return xtplParser(input);
 		} catch (err) {
@@ -19,15 +37,43 @@ export default {
 		}
 	},
 
-	compile<T>(fragment:Bone, options:XCompileOptions):(scope) => T {
+	compile<T>(fragment:IBone, options:IOptions):(scope) => T {
 		const source = [];
-		const artifact = options.mode(fragment);
+		const artifact = options.mode(fragment, <BoneConstructor>fragment.constructor);
+		const existsSTD = {};
 
 		function parseSTD(code:string):string {
-			return code.replace(/XTPL_STD_([A-Z_]+)/g, (fullName, name) => {
-				source.unshift(`var ${fullName} = ${stdLib[name].toString()}`);
+			function toStr(value) {
+				if (value === null) {
+					return 'null';
+				} else if (value === void 0) {
+					return 'void 0';
+				} else if (value instanceof Function || value instanceof RegExp) {
+					return value.toString();
+				} else {
+					return JSON.stringify(value);
+				}
+			}
+
+			return code.replace(/__STDLIB_([A-Z_]+)/g, (fullName, name) => {
+				const fn = stdLib[name];
+
+				if (!existsSTD[name]) {
+					existsSTD[name] = true;
+
+					if (fn && fn.vars) {
+						source.unshift(
+							`var ` +
+							Object.keys(fn.vars).map(name => `${name} = ${toStr(fn.vars[name])}`).join(', ') +
+							`,\n${fullName} = ${toStr(fn.method)}`
+						);
+					} else {
+						source.unshift(`var ${fullName} = ${toStr(fn)}`);
+					}
+				}
+
 				return fullName;
-			})
+			});
 		}
 
 		artifact.before && source.push(parseSTD(artifact.before));
@@ -56,7 +102,7 @@ export default {
 		return <any>Function(source.join('\n'));
 	},
 
-	fromString(input:string, options:XCompileOptions) {
+	fromString(input:string, options:IOptions) {
 		const fragment = this.parse(input);
 		const template = this.compile(fragment, options);
 		

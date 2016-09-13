@@ -362,13 +362,18 @@ export default <SkeletikParser>skeletik({
 
 	[ID_OR_CLASS]: expressionMixin(() => attrValueChain, {
 		'&': inheritEntryHandle.bind('parent'),
-		'$name_stopper': (lex, bone) => {
+		'$name_stopper': (lex:Lexer, bone) => {
 			const code = lex.code;
 			const token = lex.takeToken().trim();
 
 			token && attrValueChain.push(token);
-			addAttrValue(lex, bone, shortAttrType === DOT_CODE ? CLASS_ATTR_NAME : ID_ATTR_NAME, attrValueChain);
-			
+
+			if (attrValueChain.length) {
+				addAttrValue(lex, bone, shortAttrType === DOT_CODE ? CLASS_ATTR_NAME : ID_ATTR_NAME, attrValueChain);
+			} else {
+				fail(lex, bone, -1);
+			}
+
 			shortAttrType = code;
 			(PIPE_CODE === code) && ((bone as XBone).shorty = true);
 
