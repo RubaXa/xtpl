@@ -9,9 +9,20 @@ Template Engine with CSS-JS-like syntaxis.
 import xtpl from 'xtpl';
 import stringMode from 'xtpl-mode-string';
 
-const templateFactory = xtpl.fromString('h1.title | Hi, ${props.username}!', {
+// Create template factory
+const templateFactory = xtpl.fromString('h1.title | Hi, ${props.name}!', {
 	mode: stringMode({prettify: true}),
 	scope: ['props'],
+});
+
+// Get template
+const template = templateFactory();
+
+// Usage
+conts html = template({
+	props: {
+		name: 'xtpl'
+	},
 });
 ```
 
