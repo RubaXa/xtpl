@@ -19,7 +19,7 @@ const templateFactory = xtpl.fromString('h1.title | Hi, ${props.name}!', {
 const template = templateFactory();
 
 // Usage
-conts html = template({
+cont html = template({
 	props: {
 		name: 'xtpl'
 	},
