@@ -255,3 +255,22 @@ BigHello = [name]
 // and usage
 BigHello[name="rubaxa"]
 ```
+
+---
+
+
+### Space between the tags
+
+ - `a[<]` — before
+ - `a[>]` — after
+ - `a[<>]` — at both sides
+
+```sass
+p > img[<] + img[<>] + img[>]
+```
+
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;  :arrow_double_down:  :arrow_double_down:  :arrow_double_down:
+
+```html
+<p> <img/> <img/> <img/> </p>
+```
