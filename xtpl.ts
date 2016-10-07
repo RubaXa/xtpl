@@ -6,7 +6,7 @@ import * as syntaxUtils from './syntax/utils';
 import * as keywords from './src/keywords';
 
 export interface IOptions {
-	mode:(fragment:IBone, BoneClass?:BoneConstructor) => IArtifact;
+	mode:(fragment:IBone, BoneClass?:BoneConstructor, options?:IOptions) => IArtifact;
 	scope?:string[];
 }
 
@@ -39,7 +39,7 @@ export default {
 
 	compile<T>(fragment:IBone, options:IOptions):(scope) => T {
 		const source = [];
-		const artifact = options.mode(fragment, <BoneConstructor>fragment.constructor);
+		const artifact = options.mode(fragment, <BoneConstructor>fragment.constructor, options);
 		const existsSTD = {};
 
 		function parseSTD(code:string):string {
