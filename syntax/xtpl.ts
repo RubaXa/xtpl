@@ -758,12 +758,12 @@ export const keywords = (function () {
 					const prevSeqCode = variants[_variant][_cursor - 1];
 
 					if (
-						(seqCode === void 0) ||
+						// (seqCode === void 0) ||
 						((code === OPEN_BRACE_CODE || code === ENTER_CODE) && options.optional)
 					) {
 						// Конец, либо необязательно
 						options.validate && options.validate(lex, bone);
-						return TO_KEYWORD_END; 
+						return TO_KEYWORD_END;
 					} else if (code === seqCode) {
 						_cursor++;
 					} else if (seqCode === SPACE_CODE) {
@@ -781,7 +781,10 @@ export const keywords = (function () {
 							}
 						}
 
-						if (seqCode.attr) {
+						if (!seqCode) {
+							options.validate && options.validate(lex, bone);
+							return TO_KEYWORD_END;
+						} else if (seqCode.attr) {
 							_attr = seqCode.attr; 
 							_cursor++;
 
@@ -814,5 +817,7 @@ keywords.add('else', ' if ( @test:js )', {
 
 keywords.add('for', [
 	' ( @as:var in @data:js )',
-	' ( [ @key:var , @as:var ] in @data:js )'
+	' ( @as:var in @data:js ) track by @id:var',
+	' ( [ @key:var , @as:var ] in @data:js )',
+	' ( [ @key:var , @as:var ] in @data:js ) track by @id:var'
 ]);

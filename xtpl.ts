@@ -96,10 +96,12 @@ export default {
 		source.push('}');
 		artifact.after && source.push(artifact.after);
 
-		// Debug
-		console.log(source.join('\n'));
+		const code = utils.jsFormatting(source.join('\n'));
 
-		return <any>Function(source.join('\n'));
+		// Debug
+		console.log(code);
+
+		return <any>Function(code);
 	},
 
 	fromString(input:string, options:IOptions) {

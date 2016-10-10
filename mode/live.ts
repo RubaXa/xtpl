@@ -1,5 +1,5 @@
 import xtpl, {IBone, BoneConstructor} from '../xtpl';
-import {EXPRESSION_TYPE, ROOT_TYPE} from "../syntax/utils";
+import {EXPRESSION_TYPE} from "../syntax/utils";
 
 const {
 	ROOT_TYPE,
@@ -10,12 +10,12 @@ const {
 	HIDDEN_CLASS_TYPE,
 	DEFINE_TYPE,
 	CALL_TYPE,
+	htmlProps,
 } = xtpl.syntaxUtils;
 
 const {
 	stringify,
 	stringifyAttr,
-	stringifyObjectKey
 } = xtpl.utils;
 
 interface Node {
@@ -25,7 +25,7 @@ interface Node {
 	name:string;
 	compiledName:string;
 	attrs:any;
-	compiledAttrs:string;
+	compiledAttrs:Array<[string, string, boolean]>;
 	value:string;
 	compiledValue:string;
 	hasComputedValue:boolean;
@@ -66,7 +66,18 @@ export default (options:JSONModeOptions = {}) => (bone:IBone, BoneClass:BoneCons
 		let nameDetails = {hasComputedAttrs: false};
 		let compiledName = stringify(name, TO_STR, <IBone><any>nameDetails);
 		let attrs = raw.attrs || {};
-		let compiledAttrs = Object.keys(attrs).map((name:string) => `${stringifyObjectKey(name)}: ${stringifyAttr(name, attrs[name], TO_STR, bone)}`);
+		let hasComputedAttrs = false;
+		let compiledAttrs = Object.keys(attrs).map((name:string) => {
+			let attrDetails = {hasComputedAttrs: false};
+			const value = stringifyAttr(
+				name,
+				attrs[name],
+				TO_STR,
+				attrDetails
+			);
+			hasComputedAttrs = hasComputedAttrs ||  attrDetails.hasComputedAttrs;
+			return [name, value, attrDetails.hasComputedAttrs];
+		});
 		let value = raw.value;
 		let valueDetails = {hasComputedAttrs: false};
 		let compiledValue = TEXT_TYPE === type ? stringify(value, TO_STR, <IBone><any>valueDetails) : '';
@@ -136,13 +147,13 @@ export default (options:JSONModeOptions = {}) => (bone:IBone, BoneClass:BoneCons
 				KEYWORD_TYPE === type ||
 				nameDetails.hasComputedAttrs ||
 				valueDetails.hasComputedAttrs ||
-				(<any>bone).hasComputedAttrs ||
+				hasComputedAttrs ||
 				hasComputedChildren
 			),
 			name,
 			compiledName,
 			attrs,
-			compiledAttrs: compiledAttrs.length ? `{${compiledAttrs.join(', ')}}` : '',
+			compiledAttrs,
 			value,
 			compiledValue,
 			children,
@@ -170,24 +181,56 @@ export default (options:JSONModeOptions = {}) => (bone:IBone, BoneClass:BoneCons
 		const children = node.children;
 
 		if (KEYWORD_TYPE === type) {
-			if (name === 'if') {
-				const fragName = `__IF_${++gid}`;
-				const fragUpd = [];
-				const args = `ctx, ${++gid}, ${node.attrs.test}, ${fragName}`;
+			if ('if' === name) {
+				const condName = `__IF_${++gid}`;
+				const condUpd = [];
+				const condBaseArgs = `ctx, ${++gid}`;
 
 				fragments.push(`
-					function ${fragName}(__frag) {
+					function ${condName}(frag) {
+						return ${node.attrs.test} ? frag || ${condName}_exec() : null;
+					}
+					
+					function ${condName}_exec() {
 						var ctx = {};
-						${compileChildren('__frag', children, fragUpd)}
-						return function () {
-							${fragUpd.join('\n')}
+						var __fragIf = fragment(${parentName});
+						${compileChildren('__fragIf', children, condUpd)}
+						return {
+							frag: __fragIf,
+							update: function () {
+								${condUpd.join('\n')}
+							}
 						};
 					}
 				`);
 
-				updaters.push(`updateCondition(${args})`);
+				updaters.push(`updateCondition(${condBaseArgs})`);
 
-				return `condition(${parentName}, ${args})`;
+				return `condition(${parentName}, ${condBaseArgs}, [${condName}])`;
+			} else if ('for' === name) {
+				const forName = `__FOR_ITERATOR_${++gid}`;
+				const forKey = attrs.key || '$index';
+				const forUpd = [];
+				const forBaseArgs = `ctx, ${++gid}, ${attrs.data}, ${stringify(attrs.id)}, ${forName}`;
+
+				fragments.push(`
+					function ${forName}(${attrs.as}, ${forKey}) {
+						var ctx = {};
+						var __fragFor = fragment(${parentName});
+						${compileChildren('__fragFor', children, forUpd)}
+						return {
+							frag: __fragFor,
+							index: ${forKey},
+							update: function (${attrs.as}, ${forKey}) {
+								${forUpd.join('\n')}
+							}
+						};
+					}
+				`);
+
+				updaters.push(`updateForeach(${forBaseArgs})`);
+
+				return `foreach(${parentName}, ${forBaseArgs})`;
 			} else {
 				throw 'todo kw';
 			}
@@ -195,8 +238,15 @@ export default (options:JSONModeOptions = {}) => (bone:IBone, BoneClass:BoneCons
 			return compileTextNode(parentName, node, updaters);
 		} else if (TAG_TYPE === type) {
 			const varName = `__x` + ++gid;
-			return `var ${varName} = node(${parentName}, ${node.compiledName})\n`
-			 + compileChildren(varName, children, updaters).join('\n');
+			return [`var ${varName} = node(${parentName}, ${node.compiledName})`].concat(
+				node.compiledAttrs.map(([name, value, isExpr]) => {
+					const fn = htmlProps.hasOwnProperty(name) ? 'prop' : 'attr';
+					const expr = `${fn}(${varName}, ${stringify(htmlProps[name] || name)}, ${value})`;
+					isExpr && updaters.push(expr);
+					return expr;
+				}),
+			 	compileChildren(varName, children, updaters).join('\n')
+			).join('\n');
 		}
 	}
 
@@ -241,19 +291,24 @@ export default (options:JSONModeOptions = {}) => (bone:IBone, BoneClass:BoneCons
 			//res = compileNode(node, updaters);
 		}
 
-		return [
-			`var ctx = {}`,
-			`${res}`,
-			fragments.join('\n'),
-			`return {`,
-			`  el: __frag.toDocumentFragment(),`,
-			`  update: function (__NEWSCOPE__) {`,
-			`    __SCOPE__ = __NEWSCOPE__`,
-			scopeVars ? scopeVars.map(name => `    ${name} = __NEWSCOPE__.${name}`).join('\n') : '',
-			`    ${updaters.join('\n')}`,
-			`  }`,
-			`}`
-		].join('\n');
+		return `
+			var ctx = {}
+			${res}
+			${fragments.join('\n')}
+			return {
+				container: null,
+				mountTo: function (container) {
+					this.container = container;
+					__frag.mountTo(container);
+					return this;
+				},
+				update: function (__NEWSCOPE__) {
+					__SCOPE__ = __NEWSCOPE__
+					${scopeVars ? scopeVars.map(name => `${name} = __NEWSCOPE__.${name}`).join('\n') : ''}
+					${updaters.join('\n')}
+				}
+			}
+		`;
 	}
 
 	const rootNode = preprocessing(bone);
