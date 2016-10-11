@@ -39,16 +39,6 @@ export const PLUS_CODE = 43; // "+"
 export const QUOTE_CODE = 34;
 export const MINUS_CODE = 45;
 
-export const htmlProps = {
-	'id': 'id',
-	'dir': 'dir',
-	'lang': 'lang',
-	'href': 'href',
-	'class': 'className',
-	'title': 'title',
-	'tabIndex': 'tabIndex',
-};
-
 export function add(parent:Bone, type:string, raw?:any):Bone {
 	return parent.add(type, raw).last;
 }

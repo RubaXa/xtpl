@@ -1,4 +1,5 @@
 import {IBone, BoneConstructor} from 'skeletik';
+import xmlParser from './syntax/xml';
 import xtplParser from './syntax/xtpl';
 import stdLib from './src/std';
 import * as utils from './src/utils';
@@ -11,6 +12,7 @@ export interface IOptions {
 }
 
 export interface IArtifact {
+	args?:string[];
 	before?:string;
 	code:string;
 	after?:string;
@@ -31,6 +33,15 @@ export default {
 	parse(input:string):IBone {
 		try {
 			return xtplParser(input);
+		} catch (err) {
+			console.log(err.pretty);
+			throw err;
+		}
+	},
+
+	parseXML(input:string):IBone {
+		try {
+			return xmlParser(input);
 		} catch (err) {
 			console.log(err.pretty);
 			throw err;
@@ -101,7 +112,7 @@ export default {
 		// Debug
 		console.log(code);
 
-		return <any>Function(code);
+		return <any>Function([].concat(artifact.args).join(', '), code);
 	},
 
 	fromString(input:string, options:IOptions) {

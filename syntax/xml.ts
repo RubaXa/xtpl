@@ -54,7 +54,7 @@ export default <SkeletikParser>skeletik({
 	'$ws': [' ', '	', '\n'],
 	'$name': ['a-z', 'A-Z', '-', ':', '0-9'],
 	'$name_start': ['a-z', 'A-Z', '_'],
-	'$attr': ['a-z', 'A-Z', '-', '_', ':', '@', '0-9']
+	'$attr': ['a-z', 'A-Z', '-', '_', ':', '@', '0-9', '.']
 }, {
 	'': {
 		'<': 'entry:open',

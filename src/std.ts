@@ -74,8 +74,4 @@ export default {
 			}
 		}
 	},
-
-	NODE_text(value) {
-		return document.createTextNode(value);
-	}
 };

@@ -241,7 +241,7 @@ function parseXML(lex:Lexer, root:Bone) {
 export default <SkeletikParser>skeletik({
 	'$stn': [' ', '\t', '\n'],
 	'$id_or_class': ['.', '#'],
-	'$name': ['a-z', 'A-Z', '-', '_', '0-9'],
+	'$name': ['a-z', 'A-Z', '-', '_', '0-9', '@'],
 	'$name_stopper': nameStoppersWithoutSpace.concat(nameStoppersWithSpace),
 	'$name_stopper_after_space': nameStoppersWithSpace,
 	'$attr': ['a-z', 'A-Z', '-', '_', ':', '@', '0-9'],
@@ -758,7 +758,7 @@ export const keywords = (function () {
 					const prevSeqCode = variants[_variant][_cursor - 1];
 
 					if (
-						// (seqCode === void 0) ||
+						(!seqCode && code === OPEN_BRACE_CODE) ||
 						((code === OPEN_BRACE_CODE || code === ENTER_CODE) && options.optional)
 					) {
 						// Конец, либо необязательно
@@ -769,8 +769,10 @@ export const keywords = (function () {
 					} else if (seqCode === SPACE_CODE) {
 						_cursor++;
 						return TO_KEYWORD;
-					} else if (code === SPACE_CODE && prevSeqCode === SPACE_CODE) {
+					} else if ((code === SPACE_CODE) && (prevSeqCode === SPACE_CODE)) {
 						// Продолжаем пропускать пробелы
+					} else if ((code === SPACE_CODE) && !seqCode) {
+						_cursor++;
 					} else {
 						if (maxVariants - _variant > 1) {
 							for (var i = _variant; i < maxVariants; i++) {
@@ -790,6 +792,7 @@ export const keywords = (function () {
 
 							return TO + KW_TYPE + '_' + seqCode.type;
 						} else {
+							debugger;
 							fail(lex, bone);
 						}
 					}

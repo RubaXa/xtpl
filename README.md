@@ -58,6 +58,20 @@ cont html = template({
 .text | ok
 ```
 
+
+#### Multiline text
+```sass
+.text |>Lorem ipsum dolor sit amet, consectetur adipiscing elit.
+Aenean mattis at sapien elementum tempor.
+Aliquam consequat egestas nisl quis pharetra.<|
+```
+
+
+#### HTML fragment
+```sass
+.main |# Click <a href="#next">me</a>. #|
+```
+
 ---
 
 

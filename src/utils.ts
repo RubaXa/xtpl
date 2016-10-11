@@ -117,15 +117,13 @@ export function jsFormatting(source) {
 		.map((line) => {
 			line = line.trim();
 
-			if (/(function|if|for[\s\(]|return\s\{)/.test(line)) {
+			if (/(function(\s\w+)?|if|for|return(\sfunc.*?)?)\s*[\(\{]/.test(line)) {
 				line = tabs.substr(0, indent) + line;
-				indent++;
+				!/return.*?;$/.test(line) && indent++;
 			} else if (/^}\s+(if|else)/.test(line)) {
 				line = tabs.substr(0, indent - 1) + line;
 			} else {
-				if (/^}[;,]?$/.test(line)) {
-					indent--;
-				}
+				/^}[;,]?$/.test(line) && indent--;
 				line = tabs.substr(0, indent) + line;
 			}
 

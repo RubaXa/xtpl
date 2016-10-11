@@ -268,4 +268,9 @@ define(['qunit', 'xtpl/syntax/xml', '../qunit.assert.fragEqual'], function (QUni
 		assert.equal(frag.first.nodes[5].nodes[4].type, 'text');
 		assert.equal(frag.first.nodes[6].type, 'text');
 	});
+
+	QUnit.test('valid attribute', function (assert) {
+		var frag = xmlParser('<div @foo.bar-Baz="qux"/>');
+		assert.deepEqual(frag.first.raw.attrs, {"@foo.bar-Baz": [["qux"]]});
+	});
 });

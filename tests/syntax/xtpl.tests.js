@@ -742,34 +742,46 @@ define(['qunit', 'xtpl/syntax/xtpl', '../qunit.assert.fragEqual'], function (QUn
 	});
 
 	QUnit.test('for (val in data)', function (assert) {
-		function testMe(tpl) {
+		function testMe(tpl, trackBy) {
 			var frag = xtplParser(tpl);
+			var forAttrs = {as: 'val', data: 'foo.bar'};
+
+			trackBy && (forAttrs.id = 'id');
 
 			assert.equal(frag.length, 1, tpl);
 			assert.equal(frag.first.type, 'keyword');
 			assert.equal(frag.first.length, 1);
-			assert.fragEqual(frag.first.raw, {name: 'for', attrs: {as: 'val', data: 'foo.bar'}});
+			assert.fragEqual(frag.first.raw, {name: 'for', attrs: forAttrs});
 			assert.fragEqual(frag.first.first.raw, {name: 'div', attrs: {class: 'foo'}});
 		}
 
 		testMe('for(val in foo.bar){.foo}');
 		testMe('for (val in foo.bar) {.foo}');
 		testMe('for ( val in foo.bar ) {.foo}');
+		testMe('for ( val in foo.bar ) track by id {.foo}', true);
+		testMe('for ( val in foo.bar )\n  .foo');
+		testMe('for ( val in foo.bar ) track by id\n  .foo', true);
 	});
 
 	QUnit.test('for ([idx, val] in data)', function (assert) {
-		function testMe(tpl) {
+		function testMe(tpl, trackBy) {
 			var frag = xtplParser(tpl);
+			var forAttrs = {as: 'val', key: 'idx', data: '[1,2]'};
+
+			trackBy && (forAttrs.id = 'id');
 
 			assert.equal(frag.length, 1, tpl);
 			assert.equal(frag.first.type, 'keyword');
 			assert.equal(frag.first.length, 1);
-			assert.fragEqual(frag.first.raw, {name: 'for', attrs: {as: 'val', key: 'idx', data: '[1,2]'}});
+			assert.fragEqual(frag.first.raw, {name: 'for', attrs: forAttrs});
 			assert.fragEqual(frag.first.first.raw, {name: 'div', attrs: {class: 'foo'}});
 		}
 
 		testMe('for([idx, val] in [1,2]){.foo}');
 		testMe('for ( [ idx , val ] in [1,2] ) { .foo }');
+		testMe('for ( [ idx , val ] in [1,2] ) track by id { .foo }', true);
+		testMe('for ( [ idx , val ] in [1,2] )\n  .foo');
+		testMe('for ( [ idx , val ] in [1,2] ) track by id\n  .foo', true);
 	});
 
 	QUnit.test('foo = [..]/{..}/(..)', function (assert) {
@@ -993,5 +1005,10 @@ define(['qunit', 'xtpl/syntax/xtpl', '../qunit.assert.fragEqual'], function (QUn
 		assert.equal(frag.first.length, 1);
 		assert.equal(frag.first.first.length, 1);
 		assert.equal(frag.last.length, 0);
+	});
+
+	QUnit.test('valid attribute', function (assert) {
+		var frag = xtplParser('div[@foo.bar-Baz="qux"]');
+		assert.deepEqual(frag.first.raw.attrs, {"@foo.bar-Baz": [["qux"]]});
 	});
 });

@@ -1,5 +1,10 @@
 import xtpl, {IBone, BoneConstructor} from '../xtpl';
 import {EXPRESSION_TYPE} from "../syntax/utils";
+import * as stddom from "../src/stddom";
+
+type COMPILED_ATTR = [string, string, boolean];
+
+const {htmlProps} = stddom;
 
 const {
 	ROOT_TYPE,
@@ -10,7 +15,6 @@ const {
 	HIDDEN_CLASS_TYPE,
 	DEFINE_TYPE,
 	CALL_TYPE,
-	htmlProps,
 } = xtpl.syntaxUtils;
 
 const {
@@ -24,8 +28,9 @@ interface Node {
 	hasComputedAttrs:boolean; // вариативны только аттрибуты
 	name:string;
 	compiledName:string;
+	hasComputedName:boolean;
 	attrs:any;
-	compiledAttrs:Array<[string, string, boolean]>;
+	compiledAttrs:Array<COMPILED_ATTR>;
 	value:string;
 	compiledValue:string;
 	hasComputedValue:boolean;
@@ -35,15 +40,16 @@ interface Node {
 	slots:Node[];
 	calls:string[];
 	isSlot:boolean;
+	alternate:Node[];
 }
 
-export interface JSONModeOptions {
+export interface LiveModeOptions {
 	debug?:boolean;
 }
 
 const R_SUPER_CALL = /^super\./;
 
-export default (options:JSONModeOptions = {}) => (bone:IBone, BoneClass:BoneConstructor, {scope:scopeVars}) => {
+export default (options:LiveModeOptions = {}) => (bone:IBone, BoneClass:BoneConstructor, {scope:scopeVars}) => {
 	const UNDEF = '__STDLIB_NIL';
 	const TO_STR = '__STDLIB_TO_STRING';
 	const RET_STR = '__STDLIB_RETURN_EMPTY_STRING';
@@ -67,17 +73,19 @@ export default (options:JSONModeOptions = {}) => (bone:IBone, BoneClass:BoneCons
 		let compiledName = stringify(name, TO_STR, <IBone><any>nameDetails);
 		let attrs = raw.attrs || {};
 		let hasComputedAttrs = false;
-		let compiledAttrs = Object.keys(attrs).map((name:string) => {
+
+		let compiledAttrs:Array<COMPILED_ATTR> = Object.keys(attrs).map((name:string):COMPILED_ATTR => {
 			let attrDetails = {hasComputedAttrs: false};
 			const value = stringifyAttr(
 				name,
 				attrs[name],
 				TO_STR,
-				attrDetails
+				<IBone><any>attrDetails
 			);
 			hasComputedAttrs = hasComputedAttrs ||  attrDetails.hasComputedAttrs;
 			return [name, value, attrDetails.hasComputedAttrs];
 		});
+
 		let value = raw.value;
 		let valueDetails = {hasComputedAttrs: false};
 		let compiledValue = TEXT_TYPE === type ? stringify(value, TO_STR, <IBone><any>valueDetails) : '';
@@ -129,6 +137,8 @@ export default (options:JSONModeOptions = {}) => (bone:IBone, BoneClass:BoneCons
 					defaultSlot.push(node);
 				} else if (HIDDEN_CLASS_TYPE === type) {
 					children.push.apply(children, node.children);
+				} else if (KEYWORD_TYPE === type && childBone.raw.name === 'else') {
+					children[children.length - 1].alternate.push(node);
 				} else {
 					children.push(node);
 				}
@@ -157,23 +167,25 @@ export default (options:JSONModeOptions = {}) => (bone:IBone, BoneClass:BoneCons
 			value,
 			compiledValue,
 			children,
+			hasComputedName: nameDetails.hasComputedAttrs,
 			hasComputedValue: valueDetails.hasComputedAttrs,
-			hasComputedAttrs: (<any>bone).hasComputedAttrs,
+			hasComputedAttrs,
 			hasKeywords,
 			hasComputedChildren,
 			calls: null,
 			slots: overridenSlots,
-			isSlot: false
+			isSlot: false,
+			alternate: [],
 		};
 	}
 
 	// Выделение статического объекта (todo: одинаковые блоки)
 	function allocateConstObject(code) {
-		return code === UNDEF ? code : constPrefix + constObjects.push(code);
+		return `${constPrefix + constObjects.push(code)}.cloneNode(true)`;
 	}
 
 	// Компиляция подготовленной ноды
-	function compileNode(parentName:string, node:Node, updaters) {
+	function compileNode(parentName:string, node:Node, updaters, fragments) {
 		const type = node.type;
 		const name = node.name;
 		const attrs = node.attrs;
@@ -181,93 +193,127 @@ export default (options:JSONModeOptions = {}) => (bone:IBone, BoneClass:BoneCons
 		const children = node.children;
 
 		if (KEYWORD_TYPE === type) {
-			if ('if' === name) {
-				const condName = `__IF_${++gid}`;
-				const condUpd = [];
-				const condBaseArgs = `ctx, ${++gid}`;
+			if ('if' === name || 'else' === name) {
+				const condBaseId = ++gid;
+				const condNames = [node].concat(node.alternate).map((node) => {
+					const condUpd = [];
+					const condName = `__IF_${++gid}`;
+					const children = node.children;
 
-				fragments.push(`
-					function ${condName}(frag) {
-						return ${node.attrs.test} ? frag || ${condName}_exec() : null;
-					}
-					
-					function ${condName}_exec() {
-						var ctx = {};
-						var __fragIf = fragment(${parentName});
-						${compileChildren('__fragIf', children, condUpd)}
-						return {
-							frag: __fragIf,
-							update: function () {
-								${condUpd.join('\n')}
-							}
-						};
-					}
-				`);
+					fragments.push(`
+						function ${condName}(frag) {
+							return ${node.attrs.test || 'true'} ? frag || ${condName}_exec() : null;
+						}
+						
+						function ${condName}_exec() {
+							var ctx = {};
+							var __fragIf = __fragment(${parentName});
+							${compileChildren('__fragIf', children, condUpd, fragments).join('\n')}
+							return {
+								frag: __fragIf,
+								update: function () {
+									${condUpd.join('\n')}
+								}
+							};
+						}
+					`);
 
-				updaters.push(`updateCondition(${condBaseArgs})`);
+					return condName;
+				});
 
-				return `condition(${parentName}, ${condBaseArgs}, [${condName}])`;
+				updaters.push(`__updateCondition(ctx[${condBaseId}])`);
+
+				return `__condition(${parentName}, ctx, ${condBaseId}, [${condNames.join(', ')}])`;
 			} else if ('for' === name) {
 				const forName = `__FOR_ITERATOR_${++gid}`;
 				const forKey = attrs.key || '$index';
 				const forUpd = [];
-				const forBaseArgs = `ctx, ${++gid}, ${attrs.data}, ${stringify(attrs.id)}, ${forName}`;
+				const forId = ++gid;
+				const forBaseArgs = `${attrs.data}, ${stringify(attrs.id)}, ${forName}`;
+				const forFrags = [];
 
 				fragments.push(`
 					function ${forName}(${attrs.as}, ${forKey}) {
 						var ctx = {};
-						var __fragFor = fragment(${parentName});
-						${compileChildren('__fragFor', children, forUpd)}
+						var __fragFor = __fragment(${parentName});
+						${compileChildren('__fragFor', children, forUpd, forFrags).join('\n')}
+						${forFrags.join('\n')}
 						return {
 							frag: __fragFor,
 							index: ${forKey},
-							update: function (${attrs.as}, ${forKey}) {
+							update: function (__${attrs.as}, __${forKey}) {
+								${attrs.as} = __${attrs.as}
+								${forKey} = __${forKey}
 								${forUpd.join('\n')}
 							}
 						};
 					}
 				`);
 
-				updaters.push(`updateForeach(${forBaseArgs})`);
+				updaters.push(`__updateForeach(ctx[${forId}], ${forBaseArgs})`);
 
-				return `foreach(${parentName}, ${forBaseArgs})`;
+				return `__foreach(${parentName}, ctx, ${forId}, ${forBaseArgs})`;
 			} else {
 				throw 'todo kw';
 			}
 		} else if (TEXT_TYPE === type) {
-			return compileTextNode(parentName, node, updaters);
+			return compileTextNode(parentName, node, updaters, fragments);
 		} else if (TAG_TYPE === type) {
-			const varName = `__x` + ++gid;
-			return [`var ${varName} = node(${parentName}, ${node.compiledName})`].concat(
-				node.compiledAttrs.map(([name, value, isExpr]) => {
-					const fn = htmlProps.hasOwnProperty(name) ? 'prop' : 'attr';
-					const expr = `${fn}(${varName}, ${stringify(htmlProps[name] || name)}, ${value})`;
+			const tagId = ++gid;
+			const varName = `__x` + tagId;
+
+			let code = [];
+
+			if (node.hasComputedName || node.hasComputedAttrs) {
+				code.push(`__liveNode(${parentName}, ctx, ${tagId}, ${node.compiledName})`);
+				node.hasComputedName && updaters.push(`__updateLiveNode(ctx[${tagId}], ${node.compiledName})`);
+			} else {
+				code.push(`__node(${parentName}, ${node.compiledName})`);
+			}
+
+			code = code.concat(
+				node.compiledAttrs.map(([name, value, isExpr]:COMPILED_ATTR):string => {
+					let fn;
+					let expr = varName;
+					
+					if (isExpr || node.hasComputedName) {
+						fn = htmlProps.hasOwnProperty(name) ? '__dProp' : '__dAttr';
+						expr = `ctx[${tagId}]`;
+					} else {
+						fn = htmlProps.hasOwnProperty(name) ? '__prop' : '__attr';
+					}
+					
+					expr = `${fn}(${expr}, ${stringify(htmlProps[name] || name)}, ${value})`;
+
 					isExpr && updaters.push(expr);
+
 					return expr;
 				}),
-			 	compileChildren(varName, children, updaters).join('\n')
-			).join('\n');
+			 	compileChildren(varName, children, updaters, fragments)
+			);
+
+			return `var ${varName} = ${code.join('\n')}`;
 		}
 	}
 
-	function compileTextNode(parentName:string, {hasComputedValue, value, compiledValue}:Node, updaters) {
+	function compileTextNode(parentName:string, {hasComputedValue, value, compiledValue}:Node, updaters, fragments) {
 		if (hasComputedValue) {
-			return value.map(item => {
+			return (value as any).map((item:any) => {
 				if (EXPRESSION_TYPE === item.type) {
-					const args = `ctx, ${++gid}, ${item.raw}`;
-					updaters.push(`updateValue(${args})`);
-					return `value(${parentName}, ${args})`;
+					const id = ++gid;
+					updaters.push(`__updateValue(ctx[${id}], ${item.raw})`);
+					return `__value(${parentName}, ctx, ${id}, ${item.raw})`;
 				} else {
-					return `text(${parentName}, ${stringify(item)})`;
+					return `__text(${parentName}, ${stringify(item)})`;
 				}
 			}).join('\n');
 		} else {
-			return `text(${parentName}, ${compiledValue})`;
+			return `__text(${parentName}, ${compiledValue})`;
 		}
 	}
 
-	function compileChildren(parentName:string, children:Node[], updaters:string[]) {
-		return children.map(child => compileNode(parentName, child, updaters));
+	function compileChildren(parentName:string, children:Node[], updaters:string[], fragments) {
+		return children.map(child => compileNode(parentName, child, updaters, fragments));
 	}
 
 	function compileFragment(node:Node) {
@@ -275,16 +321,16 @@ export default (options:JSONModeOptions = {}) => (bone:IBone, BoneClass:BoneCons
 		const children = rootNode.children;
 		const length = children.length;
 		const first = children[0];
-		let res = `var __frag = fragment()\n`;
+		let res = `var __frag = __fragment()\n`;
 
 		if (ROOT_TYPE === node.type) {
 			if (length === 1 && (first.type === TEXT_TYPE && first.hasComputedValue && first.value.length > 1)) {
-				res += compileNode('__frag', first, updaters);
+				res += compileNode('__frag', first, updaters, fragments);
 			} else if (length > 1) {
-				throw 'todo';
-				// res = `nodes("#", ${compileChildren(children, updaters)})`;
+				// throw 'todo';
+				res += compileChildren('__frag', node.children, updaters, fragments).join('\n');
 			} else {
-				res += compileNode('__frag', first, updaters);
+				res += compileNode('__frag', first, updaters, fragments);
 			}
 		} else {
 			throw 'todo';
@@ -315,9 +361,7 @@ export default (options:JSONModeOptions = {}) => (bone:IBone, BoneClass:BoneCons
 	const results = compileFragment(rootNode);
 
 	const globals = [];
-	const globalVars:string[] = [].concat(
-		constObjects.map((code, idx) => `${constPrefix + (idx + 1)} = ${code}`)
-	);
+	const globalVars:string[] = [];
 
 	while (varMax--) {
 		globalVars.push(`_$$${varMax + 1}`);
@@ -327,8 +371,21 @@ export default (options:JSONModeOptions = {}) => (bone:IBone, BoneClass:BoneCons
 		// globals.push(compileNode(node));
 	});
 
+	// Export DOM methods
+	(
+		'fragment text value node liveNode prop attr dProp dAttr condition foreach ' +
+		'updateValue updateLiveNode updateCondition updateForeach'
+	).split(' ').forEach(name => {
+		globalVars.push(`__${name} = __STDDOM.${name}`);
+	});
+
+	constObjects.forEach((code, idx) => {
+		globalVars.push(`${constPrefix + (idx + 1)} = ${code}`);
+	});
+
 	return {
-		before: (globalVars.length ? `var ${globalVars.join(',\n')}\n` : '') + globals.join('\n'),
+		args: ['__STDDOM'],
+		before: `var ${globalVars.join(',\n')}\n${globals.join('\n')}`,
 		code: results
 	};
 };
