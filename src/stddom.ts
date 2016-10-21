@@ -271,7 +271,12 @@ export function updateCondition(condition) {
 
 	if (node !== newNode) {
 		(node !== null) && node.frag.remove();
-		(newNode !== null) && newNode.frag.appendToBefore(condition.parent, condition.anchor);
+
+		if (newNode !== null) {
+			newNode.frag.appendToBefore(condition.parent, condition.anchor);
+			newNode.frag.parentNode = condition.parent;
+		}
+		
 		condition.node = newNode;
 	}
 

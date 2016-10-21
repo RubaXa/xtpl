@@ -16,7 +16,7 @@
 	let gid = 0;
 	const store = createStore({
 		filter: 'all',
-		todos: [],
+		todos: [{id: ++gid, title: 'foo', completed: false}],
 		filtered: ({filter, todos}, query) => filter === 'all' ? todos : query.where('completed', filter !== 'all')(todos),
 		completed: ({todos}, query) => query.where('completed', true)(todos),
 		leftCount: ({todos, completed}) => todos.length - completed.length,
