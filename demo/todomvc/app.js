@@ -13,18 +13,21 @@
 	}
 
 	// Описание `store` приложения
+	let gid = 0;
 	const store = createStore({
 		filter: 'all',
-		todos: [{id: 1, title: 'foo', completed: true}],
+		todos: [],
 		filtered: ({filter, todos}, query) => filter === 'all' ? todos : query.where('completed', filter !== 'all')(todos),
 		completed: ({todos}, query) => query.where('completed', true)(todos),
 		leftCount: ({todos, completed}) => todos.length - completed.length,
 	}, {
 		'todo:create'(evt) {
-			const value = evt.target.newTodo.value.trim();
+			const {newTodo} = evt.target;
+			const value = newTodo.value.trim();
 
 			evt.preventDefault();
-			value && this.todos.push({id: 2, title: value, completed: false});
+			value && this.todos.push({id: ++gid, title: value, completed: false});
+			newTodo.value = '';
 		},
 
 		'todo:toggle'(evt, todo) {
@@ -34,6 +37,10 @@
 		'todo:destroy'(evt, todo) {
 			this.todos.splice(this.todos.indexOf(todo), 1);
 		},
+
+		'todo:clear-completed'() {
+			this.todos = this.todos.filter(({completed}) => !completed);
+		}
 	});
 
 	// Шаблон приложения

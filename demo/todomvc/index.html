@@ -15,7 +15,7 @@
 			header.header
 				h1 | todos
 				form[on-submit="${action('todo:create')}"]
-					input.new-todo[name="newTodo" placeholder="What needs to be done?" autofocus="true"]
+					input.new-todo[name="newTodo" placeholder="What needs to be done?" autofocus autocomplete="off"]
 
 			section.main
 				input.toggle-all[type="checkbox"]
@@ -25,7 +25,6 @@
 					for (todo in todos) track by id
 						li
 							class.completed: todo.completed
-
 							.view
 								input.toggle[on-change="${action('todo:toggle', todo)}" type="checkbox" checked="${todo.completed}"]
 								label | ${todo.title}
@@ -42,7 +41,7 @@
 						li > a[href="#/completed"] | Completed
 
 					if (leftCount < todos.length)
-						button.clear-completed | Clear completed
+						button.clear-completed[on-click="${action('todo:clear-completed')}"] | Clear completed
 	</script>
 
 	<div id="root"></div>
