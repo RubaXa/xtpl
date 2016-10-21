@@ -522,6 +522,13 @@ define(['qunit', 'xtpl/syntax/xtpl', '../qunit.assert.fragEqual'], function (QUn
 		testMe('a[href=".."]\n| link', 2);
 	});
 
+	QUnit.test('i[v="/"]', function (assert) {
+		var frag = xtplParser('i[v="/"]');
+
+		assert.equal(frag.length, 1);
+		assert.fragEqual(frag.first.raw, {name: 'i', attrs: {v: '/'}});
+	});
+
 	QUnit.test('indent', function (assert) {
 		function testMe(space) {
 			var frag = xtplParser([

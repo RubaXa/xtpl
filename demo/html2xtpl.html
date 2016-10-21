@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf8"/>
+	<title>html to xtpl</title>
+	<style>
+		#xtpl-editor {
+			position: absolute;
+			top: 0;
+			left: 50%;
+			width: 50%;
+			height: 100%;
+		}
+
+		#html-editor {
+			position: absolute;
+			top: 0;
+			left: 0;
+			width: 50%;
+			height: 100%;
+		}
+
+		body {
+			background: #25282c
+		}
+	</style>
+
+
+</head>
+<body>
+
+<div id="html-editor">
+&lt;div id="content" class="mw-body" role="main">
+  &lt;h1 id="firstHeading" class="firstHeading" lang="en">Benchmark (computing)&lt;/h1>
+  &lt;div id="bodyContent" class="mw-body-content">&lt;/div>
+&lt;/div>
+</div>
+<div id="xtpl-editor"></div>
+
+
+<script src="https://cdn.jsdelivr.net/ace/1.2.4/min/ace.js"></script>
+
+<script src="./ace/xtpl_highlight_rules.js"></script>
+<script src="./ace/xtpl.js"></script>
+
+<script src="../dist/xtpl-bundle.js"></script>
+<script src="../dist/xtpl-mode-string-bundle.js"></script>
+
+<script>
+	define('xtpl', [], function () { return xtpl; });
+	define('xtpl/mode/string', [], function () { return xtplModeString; });
+</script>
+
+<script src="./src/html2xtpl.js"></script>
+
+</body>
+</html>

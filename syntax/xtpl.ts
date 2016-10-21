@@ -443,7 +443,7 @@ export default <SkeletikParser>skeletik({
 
 	[INLINE_ATTR_VALUE]: expressionMixin(() => attrValueChain, {
 		'"': (lex, bone) => {
-			if (lex.prevCode !== SLASH_CODE) {
+			if (lex.prevCode !== BACKSLASH_CODE) {
 				const token = lex.takeToken();
 				token && attrValueChain.push(token);
 				addAttrValue(lex, bone, inlineAttrName, attrValueChain);

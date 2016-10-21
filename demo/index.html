@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf8"/>
+	<title>xtpl :: playground</title>
+	<style>
+		#xtpl-editor {
+			position: absolute;
+			top: 0;
+			left: 0;
+			width: 50%;
+			height: 100%;
+		}
+
+		#html-editor {
+			position: absolute;
+			top: 0;
+			left: 50%;
+			width: 50%;
+			height: 100%;
+		}
+
+		body {
+			background: #25282c
+		}
+	</style>
+
+
+</head>
+<body>
+
+<div id="xtpl-editor">
+//&lt;div class="panel panel-default">
+//	&lt;div class="panel-heading">
+//		&lt;h3 class="panel-title">Panel title&lt;/h3>
+//	&lt;/div>
+//	&lt;div class="panel-body">
+//		Panel content
+//	&lt;/div>
+//&lt;/div>
+</div>
+<div xid="xtpl-editor">
+!5
+html[lang="en"]
+	head
+		meta[charset="utf-8"]
+		title | Example page
+	body
+		h1.header | Simple. Easy. Flexible.
+		
+		// CustomElement: Button with icon + text
+		btn = [type, text]
+			button.btn.btn-${type} > i.fa.fa-question + .text | ${text}!
+
+		// Nesting operator
+		section#root.container-fluid > .row > .col-sm-12
+			// Usage CustomElement
+			btn[type="info" text="Wow"]
+
+			// (1) Stacked progressbar
+			.progress
+				.&-bar.&-bar-success[style="width: 35%"] > span.sr-only | 35%
+				.&-bar.&-bar-warning.&-bar-striped[style="width: 20%"] > span.sr-only | 20%
+				.&-bar.&-bar-danger[style="width: 10%"] > span.sr-only | 10%
+
+			// (2) Stacked progressbar
+			.progress > %-bar
+				.&.&-success[style="width: 35%"] > span.sr-only | 35%
+				.&.&-warning.&-bar-striped[style="width: 20%"] > span.sr-only | 20%
+				.&.&-danger[style="width: 10%"] > span.sr-only | 10%
+</div>
+
+<div id="html-editor"></div>
+
+<script src="https://cdn.jsdelivr.net/ace/1.2.4/min/ace.js"></script>
+
+<script src="./ace/xtpl_highlight_rules.js"></script>
+<script src="./ace/xtpl.js"></script>
+
+<script src="../dist/xtpl-bundle.js"></script>
+<script src="../dist/xtpl-mode-string-bundle.js"></script>
+<script>
+	define('xtpl', [], function () { return xtpl; });
+	define('xtpl/mode/string', [], function () { return xtplModeString; });
+</script>
+
+<script src="./src/app.js"></script>
+
+</body>
+</html>

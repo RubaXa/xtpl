@@ -5,8 +5,10 @@ export const htmlProps = {
 	'href': 'href',
 	'class': 'className',
 	'className': 'className',
+	'checked': 'checked',
 	'title': 'title',
 	'tabIndex': 'tabIndex',
+	'autofocus': 'autoFocus',
 };
 
 export function prop(el, name, value) {
@@ -21,6 +23,14 @@ export function dProp(node, name, value) {
 	if (node.attrs[name] !== value) {
 		node.el[name] = value;
 		node.attrs[name] = value;
+	}
+}
+
+export function event(node, name, listener) {
+	if (node.events[name] !== listener) {
+		node.events[name] && node.el.removeEventListener(name, node.events[name]);
+		node.el.addEventListener(name, listener);
+		node.events[name] = listener;
 	}
 }
 
@@ -118,6 +128,7 @@ export function liveNode(parent, ctx, id, name) {
 		name,
 		parent,
 		attrs: {},
+		events: {},
 		pool: {}
 	};
 

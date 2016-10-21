@@ -41,9 +41,14 @@ interface Node {
 	calls:string[];
 	isSlot:boolean;
 	alternate:Node[];
+	wsBefore:boolean
+	wsAfter:boolean;
 }
 
 export interface LiveModeOptions {
+	/** Заинлайнить stdom */
+	stddom?:boolean;
+
 	debug?:boolean;
 }
 
@@ -79,7 +84,7 @@ export default (options:LiveModeOptions = {}) => (bone:IBone, BoneClass:BoneCons
 			const value = stringifyAttr(
 				name,
 				attrs[name],
-				TO_STR,
+				htmlProps[name] || /^on-/.test(name) ? null : TO_STR,
 				<IBone><any>attrDetails
 			);
 			hasComputedAttrs = hasComputedAttrs ||  attrDetails.hasComputedAttrs;
@@ -176,6 +181,8 @@ export default (options:LiveModeOptions = {}) => (bone:IBone, BoneClass:BoneCons
 			slots: overridenSlots,
 			isSlot: false,
 			alternate: [],
+			wsBefore: raw.wsBefore,
+			wsAfter: raw.wsAfter,
 		};
 	}
 
@@ -207,7 +214,7 @@ export default (options:LiveModeOptions = {}) => (bone:IBone, BoneClass:BoneCons
 						
 						function ${condName}_exec() {
 							var ctx = {};
-							var __fragIf = __fragment(${parentName});
+							var __fragIf = __fragment();
 							${compileChildren('__fragIf', children, condUpd, fragments).join('\n')}
 							return {
 								frag: __fragIf,
@@ -272,11 +279,16 @@ export default (options:LiveModeOptions = {}) => (bone:IBone, BoneClass:BoneCons
 			}
 
 			code = code.concat(
-				node.compiledAttrs.map(([name, value, isExpr]:COMPILED_ATTR):string => {
+				node.compiledAttrs.map((attr:COMPILED_ATTR):string => {
 					let fn;
 					let expr = varName;
-					
-					if (isExpr || node.hasComputedName) {
+					let [name, value, isExpr] = attr;
+
+					if (/^on-/.test(name)) {
+						fn = '__event';
+						name = name.substr(3);
+						expr = `ctx[${tagId}]`;
+					} else if (isExpr || node.hasComputedName) {
 						fn = htmlProps.hasOwnProperty(name) ? '__dProp' : '__dAttr';
 						expr = `ctx[${tagId}]`;
 					} else {
@@ -291,6 +303,9 @@ export default (options:LiveModeOptions = {}) => (bone:IBone, BoneClass:BoneCons
 				}),
 			 	compileChildren(varName, children, updaters, fragments)
 			);
+
+			node.wsBefore && code.unshift(`__text(${parentName}, ' ')`);
+			node.wsAfter && code.push(`__text(${parentName}, ' ')`);
 
 			return `var ${varName} = ${code.join('\n')}`;
 		}
@@ -371,9 +386,20 @@ export default (options:LiveModeOptions = {}) => (bone:IBone, BoneClass:BoneCons
 		// globals.push(compileNode(node));
 	});
 
+	if (options.stddom) {
+		globalVars.push('__STDDOM = (function (exports) {' + Object.keys(stddom).map(name => {
+			const value = stddom[name];
+
+			return `
+				var ${name} = ${typeof value === 'function' ? value.toString() : JSON.stringify(value)}
+				exports.${name} = ${name}
+			`;
+		}).join('\n') + '\nreturn exports;\n})({})')
+	}
+	
 	// Export DOM methods
 	(
-		'fragment text value node liveNode prop attr dProp dAttr condition foreach ' +
+		'fragment text value node liveNode event prop attr dProp dAttr condition foreach ' +
 		'updateValue updateLiveNode updateCondition updateForeach'
 	).split(' ').forEach(name => {
 		globalVars.push(`__${name} = __STDDOM.${name}`);
@@ -384,7 +410,7 @@ export default (options:LiveModeOptions = {}) => (bone:IBone, BoneClass:BoneCons
 	});
 
 	return {
-		args: ['__STDDOM'],
+		args: [options.stddom ? '' : '__STDDOM'],
 		before: `var ${globalVars.join(',\n')}\n${globals.join('\n')}`,
 		code: results
 	};
