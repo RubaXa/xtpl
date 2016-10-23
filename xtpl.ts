@@ -107,6 +107,8 @@ export default {
 		source.push('}');
 		artifact.after && source.push(artifact.after);
 
+		source.unshift('"use strict"');
+
 		const code = utils.jsFormatting(source.join('\n'));
 
 		// Debug

@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+
+	<link rel="stylesheet" href="http://todomvc.com/examples/react/node_modules/todomvc-common/base.css"/>
+	<link rel="stylesheet" href="http://todomvc.com/examples/react/node_modules/todomvc-app-css/index.css"/>
+
+	<title>xtpl :: TodoMVC</title>
+</head>
+<body>
+	<script id="todoapp" type="text/xtpl">
+		section.todoapp
+			header.header
+				h1 | todos
+				form[on-submit="${action('todo:create')}"]
+					input.new-todo[name="newTodo" placeholder="What needs to be done?" autofocus autocomplete="off"]
+
+			section.main
+				if (todos.length)
+					input.toggle-all[on-change="${action('toggle-all')}" type="checkbox" checked="${!leftCount}"]
+					label[for="toggle-all"] | Mark all as complete
+
+				ul.todo-list
+					for (todo in filtered) track by id
+						li
+							class.editing: false
+							class.completed: todo.completed
+							.view
+								input.toggle[on-change="${action('todo:toggle', todo)}" type="checkbox" checked="${todo.completed}"]
+								label | ${todo.title}
+								button.destroy[on-click="${action('todo:destroy', todo)}"]
+							input.edit[value="${todo.title}"]
+
+			if (todos.length)
+				footer.footer
+					span.todo-count
+						strong[>] | ${leftCount}
+						| item left
+
+					ul.filters > for (name in filters)
+						li > a[href="#${name}"]
+							class.selected: name === filter
+							| ${name.charAt(0).toUpperCase() + name.substr(1)}
+
+					if (leftCount < todos.length)
+						button.clear-completed[on-click="${action('todo:clear-completed')}"] | Clear completed
+	</script>
+
+	<div id="root"></div>
+
+	<script src="http://local.git/elastin/elastin.js"></script>
+	<script src="http://local.git/xtpl/dist/xtpl-bundle.js"></script>
+	<script src="http://local.git/xtpl/dist/xtpl-mode-live-bundle.js"></script>
+
+	<script src="./app.js"></script>
+</body>
+</html>

@@ -26,12 +26,16 @@ export function dProp(node, name, value) {
 	}
 }
 
+export function handleEvent(evt) {
+	this.events[evt.type](evt);
+}
+
 export function event(node, name, listener) {
-	if (node.events[name] !== listener) {
-		node.events[name] && node.el.removeEventListener(name, node.events[name]);
-		node.el.addEventListener(name, listener);
-		node.events[name] = listener;
+	if (!node.events.hasOwnProperty(name)) {
+		node.el.addEventListener(name, node, false);
 	}
+
+	node.events[name] = listener;
 }
 
 export function dAttr(node, name, value) {
@@ -129,6 +133,7 @@ export function liveNode(parent, ctx, id, name) {
 		parent,
 		attrs: {},
 		events: {},
+		handleEvent,
 		pool: {}
 	};
 
@@ -313,8 +318,11 @@ export function updateForeach(foreach, data, idProp, iterator) {
 						node.update(item, i);
 
 						if (node !== oldNodes[reusedLength]) {
+							if (node !== oldNodes[reusedLength + 1]) {
+								node.frag.appendToBefore(parent, reusedLength < oldLength ? oldNodes[reusedLength] : anchor);
+							}
+
 							oldNodes[node.index] = oldNodes[reusedLength];
-							node.frag.appendToBefore(parent, reusedLength < oldLength ? oldNodes[reusedLength] : anchor);
 						}
 
 						reusedLength++;
@@ -325,6 +333,7 @@ export function updateForeach(foreach, data, idProp, iterator) {
 						} else {
 							node = iterator(item, i);
 						}
+
 						node.frag.appendToBefore(parent, reusedLength < oldLength ? oldNodes[reusedLength] : anchor);
 					}
 
@@ -344,6 +353,7 @@ export function updateForeach(foreach, data, idProp, iterator) {
 				}
 
 				node.index = i;
+				node.frag.parentNode = parent;
 				newNodes[i] = node;
 			}
 		} else {

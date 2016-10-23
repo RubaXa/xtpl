@@ -15,9 +15,12 @@
 	// Описание `store` приложения
 	let gid = 0;
 	const store = createStore({
-		filter: 'all',
-		todos: [{id: ++gid, title: 'foo', completed: false}],
-		filtered: ({filter, todos}, query) => filter === 'all' ? todos : query.where('completed', filter !== 'all')(todos),
+		filter: () => location.hash.split('#')[1] || 'all',
+		filters: ['all', 'active', 'completed'],
+		todos: [
+			// {id: ++gid, title: 'foo', completed: false}
+		],
+		filtered: ({filter, todos}, query) => filter === 'all' ? todos : query.where('completed', filter !== 'active')(todos),
 		completed: ({todos}, query) => query.where('completed', true)(todos),
 		leftCount: ({todos, completed}) => todos.length - completed.length,
 	}, {
@@ -32,6 +35,12 @@
 
 		'todo:toggle'(evt, todo) {
 			todo.completed = !todo.completed;
+		},
+
+		'toggle-all'({target:{checked}}) {
+			this.todos.forEach(todo => {
+				todo.completed = checked;
+			});
 		},
 
 		'todo:destroy'(evt, todo) {
@@ -61,6 +70,12 @@
 
 	view.mountTo(container);
 	store.subscribeAll(view.update);
+
+	window.addEventListener('hashchange', () => {
+		view.update(store);
+	});
+	console.clear();
+	// store.todos[0].completed = !store.todos[0].completed;
 
 	window.store = store;
 })(xtpl, xtplModeLive, elastin);

@@ -1,55 +1,42 @@
-<!doctype html>
-<html lang="en">
+<!DOCTYPE html>
+<html>
 <head>
-	<meta charset="utf-8">
-	<meta name="viewport" content="width=device-width, initial-scale=1">
-
-	<link rel="stylesheet" href="http://todomvc.com/examples/react/node_modules/todomvc-common/base.css"/>
-	<link rel="stylesheet" href="http://todomvc.com/examples/react/node_modules/todomvc-app-css/index.css"/>
-
+	<meta charset="utf-8"/>
 	<title>xtpl :: TodoMVC</title>
+
+	<link rel="stylesheet" href="node_modules/todomvc-common/base.css">
+	<link rel="stylesheet" href="node_modules/todomvc-app-css/index.css">
 </head>
-<body>
-	<script id="todoapp" type="text/xtpl">
-		section.todoapp
-			header.header
-				h1 | todos
-				form[on-submit="${action('todo:create')}"]
-					input.new-todo[name="newTodo" placeholder="What needs to be done?" autofocus autocomplete="off"]
+<body data-framework="xtpl">
 
-			section.main
-				input.toggle-all[type="checkbox"]
-				label[for="toggle-all"] | Mark all as complete
+	<div id="app-canvas"></div>
 
-				ul.todo-list
-					for (todo in todos) track by id
-						li
-							class.completed: todo.completed
-							.view
-								input.toggle[on-change="${action('todo:toggle', todo)}" type="checkbox" checked="${todo.completed}"]
-								label | ${todo.title}
-								button.destroy[on-click="${action('todo:destroy', todo)}"]
-			if (todos.length)
-				footer.footer
-					span.todo-count
-						strong[>] | ${leftCount}
-						| item left
+	<script src="node_modules/todomvc-common/base.js"></script>
+	<script src="https://jspm.io/system@0.19.js"></script>
+	<script>
+		System.config({
+			map: {
+				'todomvc': './src/app'
+			},
+			transpiler: 'babel',
+			packages: {'': {defaultExtension: 'js'}}
+		});
 
-					ul.filters
-						li > a.selected[href="#/"] | All
-						li > a[href="#/active"] | Active
-						li > a[href="#/completed"] | Completed
+		Promise.all([
+			System.import('todomvc'),
+			System.import('./src/storage'),
+			System.import('./src/router')
+		]).then(function ([App, storage, router]) {
+			const app = App.boot(
+				window['app-canvas'],
+				storage.createLocal('todomvc'),
+				router.useHash('#')
+			);
 
-					if (leftCount < todos.length)
-						button.clear-completed[on-click="${action('todo:clear-completed')}"] | Clear completed
+			// Debug
+			window.app = app;
+		});
 	</script>
 
-	<div id="root"></div>
-
-	<script src="../../../elastin/elastin.js"></script>
-	<script src="../../dist/xtpl-bundle.js"></script>
-	<script src="../../dist/xtpl-mode-live-bundle.js"></script>
-
-	<script src="./app.js"></script>
 </body>
 </html>

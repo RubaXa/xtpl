@@ -242,7 +242,7 @@ export default (options:LiveModeOptions = {}) => (bone:IBone, BoneClass:BoneCons
 				fragments.push(`
 					function ${forName}(${attrs.as}, ${forKey}) {
 						var ctx = {};
-						var __fragFor = __fragment(${parentName});
+						var __fragFor = __fragment();
 						${compileChildren('__fragFor', children, forUpd, forFrags).join('\n')}
 						${forFrags.join('\n')}
 						return {
