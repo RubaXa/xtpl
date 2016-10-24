@@ -4,45 +4,70 @@ const PATH_TO_FILTER = {
 	'/completed': 'completed'
 };
 
+const cachedActions = {};
+
 class App {
 	constructor(el, storage, router) {
-		this.compiledTemplate = xtpl.fromString(templateString, {
-			mode
-		});
+		this.el = el;
+		this.view = null;
+		this.state = {
+			filters: Object.keys(PATH_TO_FILTER).map(x => PATH_TO_FILTER[x]),
+			filter: null,
+			todos: Task.map(storage.get() || []),
+			activeTodos: null,
+			filteredTodos: null,
+			allCompleted:  null,
+			action: (name, ...args) => {
+				let handle = cachedActions[name];
 
-		this.view = el;
+				if (args.length) {
+					handle = (evt) => {
+						this.handleEvent(evt, name, ...args)
+					};
+				} else if (handle === void 0) {
+					handle = cachedActions[name] = (evt) => {
+						this.handleEvent(evt, name);
+					};
+				}
+
+				return handle;
+			}
+		};
+
+		this.compiledTemplate = xtpl.fromString(templateString, {
+			mode: xtplModeLive({stddom: true}),
+			scope: Object.keys(this.state),
+		})();
+
+
 		this.storage = storage;
 		this.router = router;
-		this.todos = Task.map(storage.get() || []);
 
 		this.router.on('change', path => {
-			this.filter = PATH_TO_FILTER[path] || PATH_TO_FILTER['/'];
+			this.state.filter = PATH_TO_FILTER[path] || PATH_TO_FILTER['/'];
 			this.render();
 		});
 	}
 
 	getActiveTodos() {
-		return this.todos.filter(todo => !todo.completed);
+		return this.state.todos.filter(todo => !todo.completed);
 	}
 
 	getFilteredTodos() {
-		if (this.filter === 'all') {
-			return this.todos;
-		}
-
-		return this.todos.filter(todo => (
-			('active' === this.filter && !todo.completed) ||
-			('completed' === this.filter && todo.completed)
-		))
+		const {todos, filter} = this.state;
+		return filter === 'all' ? todos : todos.filter(todo => todo.completed === (filter !== 'active'));
 	}
 
 	handleEvent(evt, type, data) {
 		evt.preventDefault();
 
+		const {todos} = this.state;
+
 		switch (type) {
 			case 'add':
-				this.todos.push(new Task(data.value));
-				data.value = '';
+				const {newTodo} = evt.target;
+				todos.push(new Task(newTodo.value));
+				newTodo.value = '';
 				break;
 
 			case 'toggle':
@@ -50,35 +75,38 @@ class App {
 				break;
 
 			case 'markall':
-				this.getFilteredTodos().forEach(todo => {
+				todos.forEach(todo => {
 					todo.completed = data;
 				});
 				break;
 
 			case 'remove':
-				this.todos.splice(this.todos.indexOf(data), 1);
+				todos.splice(todos.indexOf(data), 1);
 				break;
 
 			case 'clear':
-				this.todos = this.todos.filter(todo => !todo.completed);
+				this.state.todos = todos.filter(todo => !todo.completed);
 				break;
 		}
 
 		this.render();
-		this.storage.set(this.todos);
+		this.storage.set(this.state.todos);
 	}
 
 	render() {
+		const {state} = this;
 		const activeTodos = this.getActiveTodos();
 		const filteredTodos = this.getFilteredTodos();
 
-		this.view.update({
-			todos: this.todos,
-			filter: this.filter,
-			allCompleted: filteredTodos.length && filteredTodos.every(todo => todo.completed),
-			activeTodos,
-			filteredTodos
-		});
+		state.activeTodos = activeTodos;
+		state.filteredTodos = filteredTodos;
+		state.allCompleted = filteredTodos.length && filteredTodos.every(todo => todo.completed);
+
+		if (this.view === null) {
+			this.view = this.compiledTemplate(state).mountTo(this.el);
+		} else {
+			this.view.update(state);
+		}
 
 		return this;
 	}

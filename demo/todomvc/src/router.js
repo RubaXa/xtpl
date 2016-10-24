@@ -1,5 +1,3 @@
-import Emitter from './emitter';
-
 class Router extends Emitter {
 	constructor(initialPath) {
 		super();
@@ -35,6 +33,6 @@ class HashRouter extends Router {
 	}
 }
 
-export function useHash(hashbang) {
+Router.useHash = function useHash(hashbang) {
 	return new HashRouter(hashbang);
-}
+};

@@ -1,8 +1,8 @@
-let cid = 1;
+let task_gid = 1;
 
 class Task {
 	constructor(title, completed) {
-		this.cid = cid++;
+		this.id = task_gid++;
 		this.title = title;
 		this.completed = !!completed;
 	}

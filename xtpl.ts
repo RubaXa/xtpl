@@ -9,6 +9,7 @@ import * as keywords from './src/keywords';
 export interface IOptions {
 	mode:(fragment:IBone, BoneClass?:BoneConstructor, options?:IOptions) => IArtifact;
 	scope?:string[];
+	debug?:boolean;
 }
 
 export interface IArtifact {
@@ -109,10 +110,13 @@ export default {
 
 		source.unshift('"use strict"');
 
-		const code = utils.jsFormatting(source.join('\n'));
+		let code = source.join('\n');
 
 		// Debug
-		console.log(code);
+		if (options.debug) {
+			code = utils.jsFormatting(code);
+			console.log(code);
+		}
 
 		return <any>Function([].concat(artifact.args).join(', '), code);
 	},

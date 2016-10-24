@@ -1,11 +1,9 @@
-const PREFIX = 'xtpl-example';
-
-let _pid;
-let _storeData;
+let storage_pid;
+let storage_unsavedData;
 
 class Storage {
 	constructor(name, engine) {
-		this.name = PREFIX + name;
+		this.name = 'xtpl-example' + name;
 		this.engine = engine;
 	}
 
@@ -14,17 +12,17 @@ class Storage {
 	}
 
 	set(data) {
-		_storeData = data;
+		storage_unsavedData = data;
 
-		if (!_pid) {
-			_pid = setTimeout(() => {
-				_pid = null;
-				this.engine.setItem(this.name, JSON.stringify(_storeData));
+		if (!storage_pid) {
+			storage_pid = setTimeout(() => {
+				storage_pid = null;
+				this.engine.setItem(this.name, JSON.stringify(storage_unsavedData));
 			}, 0);
 		}
 	}
 }
 
-function createLocal(name) {
+Storage.createLocal = function createLocal(name) {
 	return new Storage(name, window.localStorage);
-}
+};
