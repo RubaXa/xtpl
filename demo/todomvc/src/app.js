@@ -1,5 +1,3 @@
-import Task from './task';
-
 const PATH_TO_FILTER = {
 	'/': 'all',
 	'/active': 'active',
@@ -8,7 +6,7 @@ const PATH_TO_FILTER = {
 
 class App {
 	constructor(el, storage, router) {
-		this.compiledTemplate = xtpl.fromString(template, {
+		this.compiledTemplate = xtpl.fromString(templateString, {
 			mode
 		});
 
@@ -86,6 +84,6 @@ class App {
 	}
 }
 
-export function boot(el, storage, router) {
+function boot(el, storage, router) {
 	return new App(el, storage, router).render();
 }

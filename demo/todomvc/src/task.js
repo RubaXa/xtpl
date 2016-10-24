@@ -1,10 +1,6 @@
 let cid = 1;
 
-export default class Task {
-	static map(todos) {
-		return todos.map(data => new Task(data.title, data.completed));
-	}
-
+class Task {
 	constructor(title, completed) {
 		this.cid = cid++;
 		this.title = title;
@@ -15,3 +11,7 @@ export default class Task {
 		return {title: this.title, completed: this.completed};
 	}
 }
+
+Task.map = function map(todos) {
+	return todos.map(data => new Task(data.title, data.completed));
+};

@@ -4,38 +4,29 @@
 	<meta charset="utf-8"/>
 	<title>xtpl :: TodoMVC</title>
 
-	<link rel="stylesheet" href="node_modules/todomvc-common/base.css">
-	<link rel="stylesheet" href="node_modules/todomvc-app-css/index.css">
+	<link rel="stylesheet" href="http://todomvc.com/examples/react/node_modules/todomvc-common/base.css"/>
+	<link rel="stylesheet" href="http://todomvc.com/examples/react/node_modules/todomvc-app-css/index.css"/>
 </head>
 <body data-framework="xtpl">
 
 	<div id="app-canvas"></div>
 
-	<script src="node_modules/todomvc-common/base.js"></script>
-	<script src="https://jspm.io/system@0.19.js"></script>
+	<script src="src/task.js"></script>
+	<script src="src/storage.js"></script>
+	<script src="src/emitter.js"></script>
+	<script src="src/storage.js"></script>
+	<script src="src/template.js"></script>
+	<script src="src/app.js"></script>
+
 	<script>
-		System.config({
-			map: {
-				'todomvc': './src/app'
-			},
-			transpiler: 'babel',
-			packages: {'': {defaultExtension: 'js'}}
-		});
+		const app = boot(
+			window['app-canvas'],
+			storage.createLocal('todomvc'),
+			router.useHash('#'),
+		);
 
-		Promise.all([
-			System.import('todomvc'),
-			System.import('./src/storage'),
-			System.import('./src/router')
-		]).then(function ([App, storage, router]) {
-			const app = App.boot(
-				window['app-canvas'],
-				storage.createLocal('todomvc'),
-				router.useHash('#')
-			);
-
-			// Debug
-			window.app = app;
-		});
+		// Debug
+		window.app = app;
 	</script>
 
 </body>

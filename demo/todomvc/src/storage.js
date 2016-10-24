@@ -1,4 +1,4 @@
-const PREFIX = 'citojs-example';
+const PREFIX = 'xtpl-example';
 
 let _pid;
 let _storeData;
@@ -25,6 +25,6 @@ class Storage {
 	}
 }
 
-export function createLocal(name) {
+function createLocal(name) {
 	return new Storage(name, window.localStorage);
 }

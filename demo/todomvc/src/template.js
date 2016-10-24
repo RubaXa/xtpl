@@ -1,0 +1,2 @@
+const templateString = `
+`.trim();
