@@ -24,7 +24,7 @@
 
 				ul.todo-list
 					for (todo in filtered) track by id
-						li
+						anim() > li
 							class.editing: false
 							class.completed: todo.completed
 							.view
@@ -33,7 +33,7 @@
 								button.destroy[on-click="${action('todo:destroy', todo)}"]
 							input.edit[value="${todo.title}"]
 
-			if (todos.length)
+			anim() > if (todos.length)
 				footer.footer
 					span.todo-count
 						strong[>] | ${leftCount}

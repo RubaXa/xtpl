@@ -11,7 +11,7 @@ section.todoapp
 			label[for="toggle-all"] | Mark all as complete
 
 		ul.todo-list
-			for (todo in filteredTodos) track by id
+			anim("fade") > for (todo in filteredTodos) track by id
 				li
 					class.completed: todo.completed
 					.view
@@ -19,7 +19,7 @@ section.todoapp
 						label | \${todo.title}
 						button.destroy[on-click="\${action('remove', todo)}"]
 
-	if (todos.length)
+	anim("fade") > if (todos.length)
 		footer.footer
 			span.todo-count
 				strong[>] | \${activeTodos.length}

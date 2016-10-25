@@ -3,19 +3,21 @@ define([
 	'xtpl',
 	'xtpl/mode/live',
 	'xtpl/src/stddom',
-	'./fragment.html',
+	'xtpl/src/animator',
 	'../qunit.assert.codeEqual'
 ], function (
 	QUnit,
 	xtplModule,
 	liveModeModule,
 	stddom,
-	htmlFragment
+	Animator
 ) {
 	'use strict';
 
 	const xtpl = xtplModule.default;
 	const liveMode = liveModeModule.default;
+
+	stddom.setAnimator(Animator.default);
 
 	function fromString(input, attrs) {
 		return xtpl.fromString(input, {
@@ -238,5 +240,33 @@ ul > for (todo in todos)
 
 		view.update({todos: [{title: 'bar', completed: true}, {title: 'foo', completed: false}]});
 		assert.equal(view.container.innerHTML, '<ul><li><a>bar</a></li><li><b>foo</b></li></ul>');
+	});
+
+	QUnit.test('anim: append', function (assert) {
+		var done = assert.async();
+		var view = fromString('anim("fade") > .foo | append:far');
+
+		window.sandbox.appendChild(view.container);
+		assert.equal(view.container.firstChild.style.opacity, 0);
+
+		setTimeout(() => {
+			assert.equal(view.container.firstChild.style.opacity, 1);
+			done();
+		}, 10);
+	});
+
+	QUnit.test('anim: if', function (assert) {
+		var done = assert.async();
+		var view = fromString('anim("fade") > if (x) > .foo | bar', {x: false});
+
+		window.sandbox.appendChild(view.container);
+		assert.equal(view.container.innerHTML, '');
+
+
+		setTimeout(() => {
+			view.update({x: true});
+			assert.equal(view.container.firstChild.style.opacity, 1);
+			done();
+		}, 1);
 	});
 });

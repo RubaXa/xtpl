@@ -34,10 +34,12 @@ class App {
 			}
 		};
 
+		xtplStddom.setAnimator(xtplAnimator);
+
 		this.compiledTemplate = xtpl.fromString(templateString, {
-			mode: xtplModeLive({stddom: true}),
+			mode: xtplModeLive(),
 			scope: Object.keys(this.state),
-		})();
+		})(xtplStddom);
 
 
 		this.storage = storage;

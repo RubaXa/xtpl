@@ -83,3 +83,41 @@ rollup.rollup({
 }).catch((err) => {
 	console.error(err);
 });
+
+rollup.rollup({
+	entry: 'dist/src/stddom.js',
+	plugins: [
+		nodeResolve({main: true}),
+		commonjs({include: 'node_modules/**'})
+	]
+}).then((bundle) => {
+	var result = bundle.generate({
+		format: 'umd',
+		moduleId: 'xtplStddom',
+		moduleName: 'xtplStddom'
+	});
+
+	fs.writeFileSync('dist/xtpl-stddom-bundle.js', result.code);
+	console.log('Success: stddom');
+}).catch((err) => {
+	console.error(err);
+});
+
+rollup.rollup({
+	entry: 'dist/src/animator.js',
+	plugins: [
+		nodeResolve({main: true}),
+		commonjs({include: 'node_modules/**'})
+	]
+}).then((bundle) => {
+	var result = bundle.generate({
+		format: 'umd',
+		moduleId: 'xtplAnimator',
+		moduleName: 'xtplAnimator'
+	});
+
+	fs.writeFileSync('dist/xtpl-animator-bundle.js', result.code);
+	console.log('Success: animator');
+}).catch((err) => {
+	console.error(err);
+});

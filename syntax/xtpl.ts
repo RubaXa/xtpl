@@ -831,3 +831,5 @@ keywords.add('for', [
 	' ( [ @key:var , @as:var ] in @data:js )',
 	' ( [ @key:var , @as:var ] in @data:js ) track by @id:var'
 ]);
+
+keywords.add('anim', ' ( @name:js )');

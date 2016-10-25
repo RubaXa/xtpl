@@ -1,3 +1,12 @@
+import {AnimatorConstructor} from './animator';
+
+let Animator;
+export let GlobalAnimator:AnimatorConstructor = null;
+
+export function setAnimator(X) {
+	Animator = X;
+}
+
 export const htmlProps = {
 	'id': 'id',
 	'dir': 'dir',
@@ -82,9 +91,11 @@ export function appendToBefore(frag, before) {
 	const refNode = before.hasOwnProperty('frag') ? (before.frag[0] || before.anchor) : before;
 
 	if (this.length === 1) {
+		this.parentNode = frag;
 		parentNode.insertBefore(this[0], refNode);
 	} else if (this.length > 1) {
 		for (let i = 0; i < this.length; i++) {
+			this.parentNode = frag;
 			parentNode.insertBefore(this[i], refNode);
 		}
 	}
@@ -134,7 +145,7 @@ export function liveNode(parent, ctx, id, name) {
 		attrs: {},
 		events: {},
 		handleEvent,
-		pool: {}
+		pool: {},
 	};
 
 	return el;
@@ -170,6 +181,7 @@ export function condition(parent, ctx, id, items) {
 		items,
 		length,
 		nodes,
+		animator: GlobalAnimator ? new GlobalAnimator() : null,
 	};
 
 	(node !== null) && node.frag.appendTo(parent);
@@ -210,6 +222,7 @@ export function foreach(parent, ctx, id, data, idProp, iterator) {
 		index,
 		length: nodes.length,
 		pool: [],
+		animator: GlobalAnimator ? new GlobalAnimator() : null,
 	};
 }
 
@@ -259,6 +272,7 @@ export function updateLiveNode(node, name) {
 export function updateCondition(condition) {
 	const length = condition.length;
 	const items = condition.items;
+	const animator = condition.animator;
 	let nodes = condition.nodes;
 	let node = condition.node;
 	let newNode;
@@ -275,13 +289,13 @@ export function updateCondition(condition) {
 	}
 
 	if (node !== newNode) {
-		(node !== null) && node.frag.remove();
-
-		if (newNode !== null) {
-			newNode.frag.appendToBefore(condition.parent, condition.anchor);
-			newNode.frag.parentNode = condition.parent;
+		if (animator !== null && animator.condition) {
+			animator.condition(condition, node, newNode);
+		} else {
+			(node !== null) && node.frag.remove();
+			(newNode !== null) && newNode.frag.appendToBefore(condition.parent, condition.anchor);
 		}
-		
+
 		condition.node = newNode;
 	}
 
@@ -294,6 +308,7 @@ export function updateForeach(foreach, data, idProp, iterator) {
 	const anchor = foreach.anchor;
 	const oldNodes = foreach.nodes;
 	const oldLength = foreach.length;
+	const animator = foreach.animator;
 	const oldIndex = foreach.index;
 	const newIndex = idProp ? {} : null;
 	let prevIndex = 0;
@@ -356,7 +371,6 @@ export function updateForeach(foreach, data, idProp, iterator) {
 				}
 
 				node.index = i;
-				node.frag.parentNode = parent;
 				newNodes[i] = node;
 			}
 		} else {
@@ -370,14 +384,44 @@ export function updateForeach(foreach, data, idProp, iterator) {
 	let removed = oldLength - (newIndex === null ? newLength : reusedLength);
 
 	if (removed > 0) {
-		do {
-			node = oldNodes[oldLength - removed];
-			node.frag.remove();
-			pool.push(node);
-		} while (--removed);
+		if (animator && animator.remove) {
+			animator.remove(oldNodes.slice(oldLength - removed, oldLength), pool);
+		} else {
+			do {
+				node = oldNodes[oldLength - removed];
+
+				node.frag.remove();
+				pool.push(node);
+			} while (--removed);
+		}
 	}
 
 	foreach.index = newIndex;
 	foreach.nodes = newNodes;
 	foreach.length = newLength;
+}
+
+export function anim(animName, parent, callback) {
+	const _ga = GlobalAnimator;
+	const Anim = Animator.get(animName);
+	const startIndex = parent.length;
+
+	GlobalAnimator = Anim;
+
+	callback();
+
+	GlobalAnimator = _ga;
+
+	const nodes = [];
+
+	for (let i = startIndex; i < parent.length; i++) {
+		if (parent[i].nodeType === 1) {
+			nodes.push(parent[i]);
+		}
+	}
+
+	if (nodes.length) {
+		const anim = new Anim();
+		anim.append && anim.append(nodes);
+	}
 }

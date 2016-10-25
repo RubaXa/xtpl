@@ -200,7 +200,13 @@ export default (options:LiveModeOptions = {}) => (bone:IBone, BoneClass:BoneCons
 		const children = node.children;
 
 		if (KEYWORD_TYPE === type) {
-			if ('if' === name || 'else' === name) {
+			if ('anim' === name) {
+				return `
+					__anim(${node.attrs.name}, ${parentName}, function () {
+						${compileChildren(parentName, children, updaters, fragments).join('\n')}
+					});
+				`;
+			} else if ('if' === name || 'else' === name) {
 				const condBaseId = ++gid;
 				const condNames = [node].concat(node.alternate).map((node) => {
 					const condUpd = [];
@@ -400,7 +406,7 @@ export default (options:LiveModeOptions = {}) => (bone:IBone, BoneClass:BoneCons
 	// Export DOM methods
 	(
 		'fragment text value node liveNode event prop attr dProp dAttr condition foreach ' +
-		'updateValue updateLiveNode updateCondition updateForeach'
+		'updateValue updateLiveNode updateCondition updateForeach anim'
 	).split(' ').forEach(name => {
 		globalVars.push(`__${name} = __STDDOM.${name}`);
 	});
