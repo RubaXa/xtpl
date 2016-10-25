@@ -701,6 +701,7 @@ define(['qunit', 'xtpl/syntax/xtpl', '../qunit.assert.fragEqual'], function (QUn
 		}
 
 		testMe('.5', 'if(.5){.foo}');
+		testMe('.5', 'if(.5) > .foo');
 		testMe('true', 'if (true) {.foo}');
 		testMe('1.2', 'if (1.2)\n\t.foo\n\tspan.bar', 2);
 		testMe('-8', 'if ( -8 ) {.foo}');
@@ -736,6 +737,7 @@ define(['qunit', 'xtpl/syntax/xtpl', '../qunit.assert.fragEqual'], function (QUn
 
 		testMe('if(1){.foo}else{b.bar}');
 		testMe('if(1)\n\t.foo\nelse\n\tb.bar');
+		testMe('if(1) > .foo\nelse > b.bar');
 		testMe('if(1)  \n\t.foo\nelse  \n\tb.bar');
 		testMe('if(1){.foo}else if(-1){i.baz}else{b.bar}', true);
 		testMe('if(1) { .foo } else if (-1) { i.baz } else { b.bar }', true);

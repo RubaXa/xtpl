@@ -240,7 +240,7 @@ export default (options:JSONModeOptions = {}) => (bone:IBone, BoneClass:BoneCons
 				}
 
 				if (!node.isSlot && attrs.length) {
-					code += 'var ' + attrs.map(name => `${name} = attrs.${name}`).join('\n') + '\n';
+					code += 'var ' + attrs.map(name => `${name} = attrs.${name}`).join(',\n') + '\n';
 				}
 
 				if (node.children.length === 1) {

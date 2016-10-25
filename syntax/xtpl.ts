@@ -441,7 +441,7 @@ export default <SkeletikParser>skeletik({
 		'$': (lex, bone) => {
 			const expr = parseJS(lex, CLOSE_BRACE_CODE).slice(2);
 			addAttrValue(lex, bone, inlineAttrName, [{type: EXPRESSION_TYPE, raw: expr}]);
-			return '>' + INLINE_ATTR_VALUE_END;
+			return `>${INLINE_ATTR_VALUE_END}`;
 		},
 		'': fail
 	},
@@ -540,6 +540,7 @@ export default <SkeletikParser>skeletik({
 
 	[KEYWORD_END]: {
 		' ': CONTINUE,
+		'>': (lex, bone) => { (bone as XBone).shorty = true; },
 		'{': markAsGroup,
 		'\n': '',
 		'': fail
@@ -796,8 +797,9 @@ export const keywords = (function () {
 							_cursor++;
 
 							return TO + KW_TYPE + '_' + seqCode.type;
+						} else if (code === GT_CODE) {
+							return TO_KEYWORD_END;
 						} else {
-							debugger;
 							fail(lex, bone);
 						}
 					}
