@@ -479,6 +479,13 @@ define(['qunit', 'xtpl/syntax/xtpl', '../qunit.assert.fragEqual'], function (QUn
 		assert.fragEqual(frag.first.raw, {name: 'input', attrs: {checked: "true"}});
 	});
 
+	QUnit.test('input[checked=${state}]', function (assert) {
+		var frag = xtplParser('input[checked=${state}]', {state: true});
+
+		assert.equal(frag.length, 1);
+		assert.deepEqual(frag.first.raw, {name: 'input', attrs: {checked: [[{type: 'expression', raw: 'state'}]]}});
+	});
+
 	QUnit.test('input[type="radio"][checked] / input[type="radio" checked]', function (assert) {
 		function testMe(tpl) {
 			var frag = xtplParser(tpl);

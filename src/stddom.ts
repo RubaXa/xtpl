@@ -296,6 +296,7 @@ export function updateForeach(foreach, data, idProp, iterator) {
 	const oldLength = foreach.length;
 	const oldIndex = foreach.index;
 	const newIndex = idProp ? {} : null;
+	let prevIndex = 0;
 	let reusedLength = 0;
 	let newNodes;
 	let node;
@@ -318,14 +319,16 @@ export function updateForeach(foreach, data, idProp, iterator) {
 						node.update(item, i);
 
 						if (node !== oldNodes[reusedLength]) {
-							if (node !== oldNodes[reusedLength + 1]) {
-								node.frag.appendToBefore(parent, reusedLength < oldLength ? oldNodes[reusedLength] : anchor);
-							}
-
 							oldNodes[node.index] = oldNodes[reusedLength];
 						}
 
 						reusedLength++;
+
+						if (node.index < prevIndex) {
+							node.frag.appendToBefore(parent, reusedLength < oldLength ? oldNodes[reusedLength] : anchor);
+						} else {
+							prevIndex = node.index;
+						}
 					} else {
 						if (pool.length) {
 							node = pool.pop();

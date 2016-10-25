@@ -438,6 +438,11 @@ export default <SkeletikParser>skeletik({
 
 	[INLINE_ATTR_VALUE_AWAIT]: {
 		'"': INLINE_ATTR_VALUE,
+		'$': (lex, bone) => {
+			const expr = parseJS(lex, CLOSE_BRACE_CODE).slice(2);
+			addAttrValue(lex, bone, inlineAttrName, [{type: EXPRESSION_TYPE, raw: expr}]);
+			return '>' + INLINE_ATTR_VALUE_END;
+		},
 		'': fail
 	},
 

@@ -145,26 +145,26 @@ define([
 		var view = fromString('for (item in data) track by id\n  | ${item.txt}', {data: [{id: 1, txt: 'foo'}]});
 		var item_1 = view.container.firstChild;
 
-		assert.equal(view.container.textContent, 'foo');
+		assert.equal(view.container.textContent, 'foo', 'initial');
 
 		view.update({data: [{id: 1, txt: 'foo'}, {id: 2, txt: 'bar'}]});
 		var item_2 = view.container.childNodes[1];
 
-		assert.equal(view.container.textContent, 'foobar', 'added bar');
-		assert.ok(view.container.firstChild === item_1);
+		assert.equal(view.container.textContent, 'foobar', 'added "bar"');
+		assert.ok(view.container.firstChild === item_1, '0 -> foo');
 
 		view.update({data: [{id: 2, txt: 'bar'}, {id: 1, txt: 'foo'}]});
 
-		assert.equal(view.container.textContent, 'barfoo', 'revert');
-		assert.ok(view.container.childNodes[0] === item_2);
-		assert.ok(view.container.childNodes[1] === item_1);
+		assert.equal(view.container.textContent, 'barfoo', 'reverse');
+		assert.ok(view.container.childNodes[0] === item_2, '0 -> bar');
+		assert.ok(view.container.childNodes[1] === item_1, '1 -> foo');
 
 		view.update({data: [{id: 3, txt: 'baz'}, {id: 2, txt: 'bar'}, {id: 1, txt: 'foo'}]});
 
 		var item_3 = view.container.childNodes[0];
-		assert.equal(view.container.textContent, 'bazbarfoo', 'added baz');
-		assert.ok(view.container.childNodes[1] === item_2);
-		assert.ok(view.container.childNodes[2] === item_1);
+		assert.equal(view.container.textContent, 'bazbarfoo', 'added "baz"');
+		assert.ok(view.container.childNodes[1] === item_2, '1 -> bar');
+		assert.ok(view.container.childNodes[2] === item_1, '2 -> foo');
 
 		view.update({data: [{id: 1, txt: 'foo'}]});
 

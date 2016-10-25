@@ -46,17 +46,17 @@ define([
 
 	QUnit.test('interpolate', function (assert) {
 		var template = fromString('h1.title-${size} | Hi, ${user}!', ['user', 'size']);
-		assert.codeEqual(template, 'var __ROOT = "<h1 class=\\\"title-" + __STDLIB_HTML_ENCODE(size) + "\\\">Hi, " + __STDLIB_HTML_ENCODE(user) + "!</h1>";\n\treturn __ROOT');
+		assert.codeEqual(template, 'var __ROOT = "<h1 class=\\\"title-" + __STDLIB_HTML_ENCODE(size) + "\\\">Hi, " + __STDLIB_HTML_ENCODE(user) + "!</h1>";\nreturn __ROOT');
 	});
 
 	QUnit.test('nesting', function (assert) {
 		var template = fromString('.btn > .&__text');
-		assert.codeEqual(template, 'var __ROOT = "<div class=\\\"btn\\\"><div class=\\\"btn__text\\\"></div></div>";\n\treturn __ROOT');
+		assert.codeEqual(template, 'var __ROOT = "<div class=\\\"btn\\\"><div class=\\\"btn__text\\\"></div></div>";\nreturn __ROOT');
 	});
 
 	QUnit.test('nesting + interpolate', function (assert) {
 		var template = fromString('.${x} > .&__text', ['x']);
-		assert.codeEqual(template, 'var __ROOT = \"<div class=\\\"\" + __STDLIB_HTML_ENCODE(x) + \"\\\"><div class=\\\"\" + __STDLIB_HTML_ENCODE(x) + \"__text\\\"></div></div>\";\n\treturn __ROOT');
+		assert.codeEqual(template, 'var __ROOT = \"<div class=\\\"\" + __STDLIB_HTML_ENCODE(x) + \"\\\"><div class=\\\"\" + __STDLIB_HTML_ENCODE(x) + \"__text\\\"></div></div>\";\nreturn __ROOT');
 	});
 
 	QUnit.test('panel = [title] + default slot', function (assert) {
