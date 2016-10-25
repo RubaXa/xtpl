@@ -76,7 +76,7 @@ class App {
 
 			case 'markall':
 				todos.forEach(todo => {
-					todo.completed = data;
+					todo.completed = true;
 				});
 				break;
 
