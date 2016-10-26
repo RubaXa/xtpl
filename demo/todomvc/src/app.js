@@ -78,7 +78,7 @@ class App {
 
 			case 'markall':
 				todos.forEach(todo => {
-					todo.completed = true;
+					todo.completed = evt.target.checked;
 				});
 				break;
 

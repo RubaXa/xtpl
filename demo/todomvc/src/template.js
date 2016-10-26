@@ -11,7 +11,7 @@ section.todoapp
 			label[for="toggle-all"] | Mark all as complete
 
 		ul.todo-list
-			anim("fade") > for (todo in filteredTodos) track by id
+			anim("pinch") > for (todo in filteredTodos) track by id
 				li
 					class.completed: todo.completed
 					.view
@@ -19,7 +19,7 @@ section.todoapp
 						label | \${todo.title}
 						button.destroy[on-click="\${action('remove', todo)}"]
 
-	anim("fade") > if (todos.length)
+	anim("slide") > if (todos.length)
 		footer.footer
 			span.todo-count
 				strong[>] | \${activeTodos.length}
@@ -30,6 +30,6 @@ section.todoapp
 					class.selected: name === filter
 					| \${name.charAt(0).toUpperCase() + name.substr(1)}
 
-			if (activeTodos.length < todos.length)
+			anim("fade") > if (activeTodos.length < todos.length)
 				button.clear-completed[on-click="\${action('clear')}"] | Clear completed
 `.trim();

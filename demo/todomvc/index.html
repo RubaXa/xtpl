@@ -9,6 +9,31 @@
 </head>
 <body data-framework="xtpl">
 
+	<style>
+		.todoapp {
+			background: none;
+		}
+
+		.main {
+			position: relative;
+			z-index: 100;
+		}
+
+		.footer {
+			position: absolute;
+			z-index: 50;
+			width: 100%;
+			height: 40px;
+			box-sizing: border-box;
+			background: #fff;
+		}
+
+		.header,
+		.todo-list .view,
+		.footer {
+			background: #fff;
+		}
+	</style>
 	<div id="app-canvas"></div>
 
 	<script src="http://local.git/xtpl/dist/xtpl-bundle.js"></script>

@@ -8,66 +8,74 @@ export interface IFx {
 }
 
 export interface IAnimator {
+	appear?:(nodes:any[]) => void;
 	append?:(nodes:any[]) => void;
 	remove?:(nodes:any[], pool:any[]) => void;
-	condition?:(parent, fromNode, toNode) => void;
+	replace?:(parent, fromNode, toNode) => void;
+}
+
+export type TransitionPropValue = [any, any];
+
+export interface ITransitionProps {
+	[index:string]: TransitionPropValue;
 }
 
 export default class Animator implements IAnimator {
-	public fx:IFx = null;
-	public pid = null;
+	private pid = null;
 
-	private queue = [];
+	anim(node, props:ITransitionProps, duration:number, delay:number = 0, pool?) {
+		clearTimeout(this.pid);
+		Animator.applyTransition(node, props, duration, delay);
 
-	constructor() {}
-
-	clearQueue():void {
-		if (this.pid) {
-			clearTimeout(this.pid);
-			this.fx.end();
-			this.fx = null;
-			this.pid = null;
-			this.queue = [];
-		}
-	}
-
-	push(fx:IFx):void {
-		this.queue.push(fx);
-	}
-
-	next():void {
-		if (this.pid === null && this.queue.length) {
-			const fx = this.queue.shift();
-
-			fx.start();
-			Animator.applyTransitionDuration(fx.node, fx.duration);
-
-			this.fx = fx;
+		if (arguments.length === 5) {
 			this.pid = setTimeout(() => {
-				fx.end();
-
-				this.pid = null;
-				this.next();
-			}, fx.duration);
+				node.frag.remove();
+				Animator.clean(node);
+				pool && pool.push(node);
+			}, duration + delay);
 		}
 	}
 
-	static applyTransition(node, prop:string, from:any, to:any = null) {
-		[].forEach.call(node.frag || [node], el => {
-			if (el.style.transition === '') {
-				el.style[prop] = from;
-				el.style.transitionProperty = prop;
-				(to !== null) && el.offsetWidth;
+	static applyTransition(el, props:ITransitionProps, duration:number, delay:number = 0) {
+		if (el.hasOwnProperty('frag')) {
+			const frag = el.frag;
+
+			for (let i = 0; i < frag.length; i++) {
+				this.applyTransition(frag[i], props, duration, delay);
+			}
+		} else {
+			let rect = null;
+			const animProps = Object.keys(props).map((prop:string) => {
+				let [fromValue, toValue] = props[prop];
+
+				if (prop === 'width' || prop === 'height') {
+					(rect === null) && (rect = el.getBoundingClientRect());
+
+					(fromValue === 'auto') && (fromValue = rect[prop] + 'px');
+					(toValue === 'auto') && (props[prop][1] = rect[prop] + 'px');
+
+					el.style.overflow = 'hidden';
+				}
+
+				el.style[prop] = fromValue;
+
+				return prop;
+			});
+
+			const transitionProperties = animProps.join(', ');
+
+			if (el.style.transitionProperty !== transitionProperties) {
+				el.style.transitionProperty = transitionProperties;
+				el.offsetWidth;
 			}
 
-			(to !== null) && (el.style[prop] = to);
-		});
-	}
+			el.style.transitionDuration = duration + 'ms';
+			el.style.transitionDelay = delay + 'ms';
 
-	static applyTransitionDuration(node, duration:number) {
-		[].forEach.call(node.frag || [node], el => {
-			el.style.transitionDuration = `${duration}ms`;
-		});
+			animProps.forEach(prop => {
+				el.style[prop] = props[prop][1];
+			});
+		}
 	}
 
 	static classes:{[index:string]:AnimatorConstructor} = {};
@@ -79,69 +87,120 @@ export default class Animator implements IAnimator {
 	static get(name):AnimatorConstructor {
 		return this.classes[name];
 	}
+
+	static clean(el:HTMLElement) {
+		if (el.hasOwnProperty('frag')) {
+			const frag:HTMLElement[] = (<any>el).frag;
+
+			for (let i = 0; i < frag.length; i++) {
+				this.clean(frag[i]);
+			}
+		} else {
+			el.style.transitionProperty.split(', ').forEach(name => {
+				el.style[name] = '';
+			});
+
+			el.style.overflow = '';
+			el.style.transition = '';
+		}
+	}
 }
 
 //
 // Base effects
 //
 
-Animator.set('fade', class AnimatorFade extends Animator {
+Animator.set('fade', class extends Animator {
+	appear(nodes:any[]):void {
+		this.append(nodes);
+	}
+
 	append(nodes:any[]):void {
 		nodes.forEach((node, idx) => {
-			Animator.applyTransition(node, 'opacity', 0);
-
-			setTimeout(() => {
-				node.offsetWidth;
-				node.style.opacity = 1;
-
-				Animator.applyTransitionDuration(node, 200);
-			}, idx * 50);
+			this.anim(
+				node,
+				{'opacity': [0, 1]},
+				250,
+				idx * 50
+			);
 		});
 	}
 
-	condition(cond, fromNode, toNode):void {
-		this.clearQueue();
+	remove(nodes:any[], pool:any[] = null) {
+		nodes.forEach((node, idx) => {
+			this.anim(
+				node,
+				{'opacity': [1, 0]},
+				200,
+				idx * 50,
+				pool
+			);
+		});
+	}
+});
 
-		if (fromNode) {
-			this.push({
-				node: fromNode,
-				start() {
-					Animator.applyTransition(fromNode, 'opacity', 1, 0);
-				},
-				end() {
-					fromNode.frag.remove();
-				},
-				duration: 150,
-			});
-		}
-
-		if (toNode) {
-			this.push({
-				node: toNode,
-				start() {
-					toNode.frag.appendToBefore(cond.parent, cond.anchor);
-					Animator.applyTransition(toNode, 'opacity', 0, 1);
-				},
-				end() {},
-				duration: 250,
-			});
-		}
-
-		this.next();
+Animator.set('slide', class extends Animator {
+	appear(nodes:any[]):void {
+		this.append(nodes);
 	}
 
-	remove(nodes:any[], pool:any[]) {
+	append(nodes:any[]):void {
 		nodes.forEach((node, idx) => {
-			setTimeout(() => {
-				node.frag[0].style.overflow = 'hidden';
-				Animator.applyTransitionDuration(node, 200);
-				Animator.applyTransition(node, 'height', '58px', 0);
+			this.anim(
+				node,
+				{
+					'transform': ['translate(0, -100%)', 'translate(0, 0)'],
+					'opacity': [0, 1],
+				},
+				250,
+				idx * 50
+			);
+		});
+	}
 
-				setTimeout(() => {
-					node.frag.remove();
-					pool.push(node);
-				}, 200);
-			}, idx * 50);
+	remove(nodes:any[], pool = null):void {
+		nodes.forEach((node, idx) => {
+			this.anim(
+				node,
+				{
+					'transform': ['translate(0, 0)', 'translate(0, -100%)'],
+					'opacity': [1, 0],
+				},
+				200,
+				idx * 50,
+				pool
+			);
+		});
+	}
+});
+
+Animator.set('pinch', class extends Animator {
+	append(nodes:any[]):void {
+		nodes.forEach((node, idx) => {
+			this.anim(
+				node,
+				{
+					'height': [0, 'auto'],
+					'opacity': [0, 1],
+				},
+				250,
+				idx * 50
+			);
+		});
+	}
+
+	remove(nodes:any[], pool = null):void {
+		nodes.forEach((node, idx) => {
+			this.anim(
+				node,
+				{
+					'height': ['auto', 0],
+					'opacity': [1, 0],
+				},
+				200,
+				idx * 50,
+				pool
+			);
 		});
 	}
 });
