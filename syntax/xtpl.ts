@@ -832,4 +832,5 @@ keywords.add('for', [
 	' ( [ @key:var , @as:var ] in @data:js ) track by @id:var'
 ]);
 
+keywords.add('fx', ' ( @name:js )');
 keywords.add('anim', ' ( @name:js )');

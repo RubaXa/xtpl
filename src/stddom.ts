@@ -395,7 +395,7 @@ export function updateForeach(foreach, data, idProp, iterator) {
 
 	if (removed > 0) {
 		if (animator && animator.remove) {
-			animator.remove(oldNodes.slice(oldLength - removed, oldLength), pool);
+			animator.remove(oldNodes.slice(-removed), pool);
 		} else {
 			do {
 				node = oldNodes[oldLength - removed];
@@ -432,8 +432,10 @@ export function anim(animName, parent, callback) {
 	}
 
 	if (appended.length) {
+		const anim = new Anim();
+
+		anim.events && anim.events(appended[0]);
 		setTimeout(() => {
-			const anim = new Anim();
 			anim.appear && anim.appear(appended);
 		}, 0);
 	}

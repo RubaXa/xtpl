@@ -12,6 +12,7 @@ export interface IAnimator {
 	append?:(nodes:any[]) => void;
 	remove?:(nodes:any[], pool:any[]) => void;
 	replace?:(parent, fromNode, toNode) => void;
+	events?:(node:HTMLElement) => void;
 }
 
 export type TransitionPropValue = [any, any];
@@ -24,11 +25,11 @@ export default class Animator implements IAnimator {
 	private pid = null;
 
 	anim(node, props:ITransitionProps, duration:number, delay:number = 0, pool?) {
-		clearTimeout(this.pid);
+		clearTimeout(node.animId);
 		Animator.applyTransition(node, props, duration, delay);
 
 		if (arguments.length === 5) {
-			this.pid = setTimeout(() => {
+			node.animId = setTimeout(() => {
 				node.frag.remove();
 				Animator.clean(node);
 				pool && pool.push(node);
@@ -204,3 +205,38 @@ Animator.set('pinch', class extends Animator {
 		});
 	}
 });
+
+let activeTap;
+
+Animator.set('event:tap', class extends Animator {
+	events(el:HTMLElement):void {
+		if (el['closest']) {
+			const ctx = {
+				active: false,
+				handleEvent({type}) {
+					const target = el['closest']('.fx-root') || el;
+
+					if (type === 'mousedown') {
+						this.active = true;
+					} else if (type === 'mouseup') {
+						this.active = false;
+					}
+
+					activeTap = this;
+					target.classList.toggle('fx-tap-active', this.active && type !== 'mouseleave');
+				}
+			};
+
+			el.addEventListener('mousedown', ctx, false);
+			el.addEventListener('mouseleave', ctx, false);
+			el.addEventListener('mouseenter', ctx, false);
+		}
+	}
+});
+
+document.addEventListener('mouseup', (evt) => {
+	if (activeTap) {
+		activeTap.handleEvent(evt);
+		activeTap = null;
+	}
+}, true);

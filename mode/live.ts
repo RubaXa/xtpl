@@ -200,7 +200,7 @@ export default (options:LiveModeOptions = {}) => (bone:IBone, BoneClass:BoneCons
 		const children = node.children;
 
 		if (KEYWORD_TYPE === type) {
-			if ('anim' === name) {
+			if ('anim' === name || 'fx' === name) {
 				return `
 					__anim(${node.attrs.name}, ${parentName}, function () {
 						${compileChildren(parentName, children, updaters, fragments).join('\n')}
