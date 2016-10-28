@@ -26,7 +26,7 @@ section.todoapp
 				| \${activeTodos.length == 1 ? 'item' : 'items'} left
 
 			ul.filters > for (name in filters)
-				li > a[href="#\${name}"]
+				li > a[href="#/\${name}"]
 					class.selected: name === filter
 					| \${name.charAt(0).toUpperCase() + name.substr(1)}
 

@@ -45,7 +45,7 @@ class App {
 		this.storage = storage;
 		this.router = router;
 
-		this.router.on('change', path => {
+		this.router.on('change', (path) => {
 			this.state.filter = PATH_TO_FILTER[path] || PATH_TO_FILTER['/'];
 			this.render();
 		});
