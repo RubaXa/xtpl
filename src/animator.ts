@@ -1,16 +1,10 @@
 export type AnimatorConstructor = {new(): IAnimator};
 
-export interface IFx {
-	node:any;
-	start:() => void;
-	end:() => void;
-	duration:number;
-}
-
 export interface IAnimator {
 	appear?:(nodes:any[]) => void;
 	append?:(nodes:any[]) => void;
-	remove?:(nodes:any[], pool:any[]) => void;
+	removeOne?:(node, pool:any[]) => void;
+	removeAll?:(nodes:any[], pool:any[]) => void;
 	replace?:(parent, fromNode, toNode) => void;
 	events?:(node:HTMLElement) => void;
 }
@@ -22,7 +16,18 @@ export interface ITransitionProps {
 }
 
 export default class Animator implements IAnimator {
-	private pid = null;
+	removeOne = null;
+	removeAll = null;
+
+	remove(nodes:any, pool:any) {
+		if (nodes.length === 1 && this.removeOne) {
+			this.removeOne(nodes[0], pool);
+		} else if (this.removeAll) {
+			this.removeAll(nodes, pool);
+		} else {
+			nodes.forEach(node => { node.frag.remove() });
+		}
+	}
 
 	anim(node, props:ITransitionProps, duration:number, delay:number = 0, pool?) {
 		clearTimeout(node.animId);
@@ -37,13 +42,30 @@ export default class Animator implements IAnimator {
 		}
 	}
 
-	static applyTransition(el, props:ITransitionProps, duration:number, delay:number = 0) {
+	animClone(node, props:string|ITransitionProps, duration:number, delay:number = 0) {
+		const el = node.frag[0];
+		const clone = el.cloneNode(true);
+
+		clone.style.position = 'absolute';
+		el.parentNode.insertBefore(clone, el);
+
+		Animator.applyTransition(clone, props, duration, delay);
+	}
+
+	static applyTransition(el, props:string|ITransitionProps, duration:number, delay:number = 0) {
 		if (el.hasOwnProperty('frag')) {
 			const frag = el.frag;
 
 			for (let i = 0; i < frag.length; i++) {
 				this.applyTransition(frag[i], props, duration, delay);
 			}
+		} else if (typeof props === 'string') {
+			el.style.animationDuration = duration + 'ms';
+			el.style.animationDelay = delay + 'ms';
+
+			props.split(/\s+/).forEach(name => {
+				el.classList.add(name);
+			});
 		} else {
 			let rect = null;
 			const animProps = Object.keys(props).map((prop:string) => {
@@ -86,6 +108,20 @@ export default class Animator implements IAnimator {
 	}
 
 	static get(name):AnimatorConstructor {
+		if (name.indexOf('+') > -1) {
+			const Fx = class extends Animator {};
+
+			name.split('+').forEach(name => {
+				const proto = Animator.get(name).prototype;
+
+				Object.keys(proto).forEach(name => {
+					Fx.prototype[name] = proto[name];
+				});
+			});
+
+			this.classes[name] = Fx;
+		}
+
 		return this.classes[name];
 	}
 
@@ -127,7 +163,7 @@ Animator.set('fade', class extends Animator {
 		});
 	}
 
-	remove(nodes:any[], pool:any[] = null) {
+	removeAll(nodes:any[], pool:any[] = null) {
 		nodes.forEach((node, idx) => {
 			this.anim(
 				node,
@@ -159,7 +195,7 @@ Animator.set('slide', class extends Animator {
 		});
 	}
 
-	remove(nodes:any[], pool = null):void {
+	removeAll(nodes:any[], pool = null):void {
 		nodes.forEach((node, idx) => {
 			this.anim(
 				node,
@@ -190,7 +226,7 @@ Animator.set('pinch', class extends Animator {
 		});
 	}
 
-	remove(nodes:any[], pool = null):void {
+	removeAll(nodes:any[], pool = null):void {
 		nodes.forEach((node, idx) => {
 			this.anim(
 				node,
@@ -206,37 +242,20 @@ Animator.set('pinch', class extends Animator {
 	}
 });
 
-let activeTap;
+Animator.set('hinge', class extends Animator {
+	removeOne(node, pool = null):void {
+		this.animClone(
+			node,
+			'animated hinge',
+			1500
+		);
 
-Animator.set('event:tap', class extends Animator {
-	events(el:HTMLElement):void {
-		if (el['closest']) {
-			const ctx = {
-				active: false,
-				handleEvent({type}) {
-					const target = el['closest']('.fx-root') || el;
-
-					if (type === 'mousedown') {
-						this.active = true;
-					} else if (type === 'mouseup') {
-						this.active = false;
-					}
-
-					activeTap = this;
-					target.classList.toggle('fx-tap-active', this.active && type !== 'mouseleave');
-				}
-			};
-
-			el.addEventListener('mousedown', ctx, false);
-			el.addEventListener('mouseleave', ctx, false);
-			el.addEventListener('mouseenter', ctx, false);
-		}
+		this.anim(
+			node,
+			{'height': ['auto', 0]},
+			100,
+			0,
+			pool
+		);
 	}
 });
-
-document.addEventListener('mouseup', (evt) => {
-	if (activeTap) {
-		activeTap.handleEvent(evt);
-		activeTap = null;
-	}
-}, true);

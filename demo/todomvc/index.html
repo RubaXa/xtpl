@@ -4,6 +4,8 @@
 	<meta charset="utf-8"/>
 	<title>xtpl :: TodoMVC</title>
 
+	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.5.2/animate.min.css"/>
+
 	<link rel="stylesheet" href="http://todomvc.com/examples/react/node_modules/todomvc-common/base.css"/>
 	<link rel="stylesheet" href="http://todomvc.com/examples/react/node_modules/todomvc-app-css/index.css"/>
 </head>
@@ -33,13 +35,11 @@
 		.footer {
 			background: #fff;
 		}
-
-		.fx-root {
-			transition: transform 300ms;
-		}
-
-		.fx-tap-active {
-			transform: scale(0.985);
+		.todo-list li.hinge {
+			width: 80%;
+			position: absolute;
+			z-index: 100;
+			box-shadow: 0 2px 4px 0 rgba(0, 0, 0, 0.2), 0 25px 50px 0 rgba(0, 0, 0, 0.1);
 		}
 	</style>
 	<div id="app-canvas"></div>

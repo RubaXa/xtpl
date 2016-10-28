@@ -11,13 +11,13 @@ section.todoapp
 			label[for="toggle-all"] | Mark all as complete
 
 		ul.todo-list
-			fx("pinch") > for (todo in filteredTodos) track by id
-				li.fx-root
+			fx("pinch+hinge") > for (todo in filteredTodos) track by id
+				li
 					class.completed: todo.completed
 					.view
 						input.toggle[on-change="\${action('toggle', todo)}" type="checkbox" checked="\${todo.completed}"]
 						label | \${todo.title}
-						fx("event:tap") > button.destroy[on-click="\${action('remove', todo)}"]
+						button.destroy[on-click="\${action('remove', todo)}"]
 
 	fx("slide") > if (todos.length)
 		footer.footer
