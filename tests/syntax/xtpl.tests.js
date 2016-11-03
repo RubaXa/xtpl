@@ -1027,4 +1027,9 @@ define(['qunit', 'xtpl/syntax/xtpl', '../qunit.assert.fragEqual'], function (QUn
 		var frag = xtplParser('div[@foo.bar-Baz="qux"]');
 		assert.deepEqual(frag.first.raw.attrs, {"@foo.bar-Baz": [["qux"]]});
 	});
+
+	QUnit.test('import', function (assert) {
+		var frag = xtplParser('import elem from "path/to"\nelem[foo="yes"]');
+		assert.deepEqual(frag.first.raw.attrs, {name: 'elem', from: '"path/to"'});
+	});
 });

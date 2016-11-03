@@ -269,4 +269,16 @@ ul > for (todo in todos)
 			done();
 		}, 1);
 	});
+
+	QUnit.test('import', function (assert) {
+		var done = assert.async();
+		var view = fromString('import foo from "./foo"\nfoo[state=${x}]', {x: 'foo'});
+
+		assert.equal(view.container.innerHTML, '', 'init');
+
+		setTimeout(() => {
+			assert.equal(view.container.innerHTML, '<b class="foo"></b>');
+			done();
+		}, 5);
+	});
 });

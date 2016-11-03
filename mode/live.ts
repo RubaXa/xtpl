@@ -88,6 +88,7 @@ export default (options:LiveModeOptions = {}) => (bone:IBone, BoneClass:BoneCons
 				<IBone><any>attrDetails
 			);
 			hasComputedAttrs = hasComputedAttrs ||  attrDetails.hasComputedAttrs;
+
 			return [name, value, attrDetails.hasComputedAttrs];
 		});
 
@@ -105,6 +106,13 @@ export default (options:LiveModeOptions = {}) => (bone:IBone, BoneClass:BoneCons
 		if (CALL_TYPE === type) {
 			attrs = raw.args;
 			usedSlots && (usedSlots[name] = true);
+		}
+
+		if (KEYWORD_TYPE === type && name === 'import') {
+			isCustomElems[attrs.name] = {
+				type: 'import',
+				name: attrs.name,
+			};
 		}
 
 		bone.nodes.forEach((childBone:IBone) => {
@@ -201,12 +209,17 @@ export default (options:LiveModeOptions = {}) => (bone:IBone, BoneClass:BoneCons
 
 		if (KEYWORD_TYPE === type) {
 			if ('anim' === name || 'fx' === name) {
+				// Эффекты
 				return `
 					__anim(${node.attrs.name}, ${parentName}, function () {
 						${compileChildren(parentName, children, updaters, fragments).join('\n')}
 					});
 				`;
+			} else if ('import' === name) {
+				// Импорт блоков
+				return `__importComponent("${node.attrs.name}", ${node.attrs.from});`;
 			} else if ('if' === name || 'else' === name) {
+				// Условные операторы
 				const condBaseId = ++gid;
 				const condNames = [node].concat(node.alternate).map((node) => {
 					const condUpd = [];
@@ -238,6 +251,7 @@ export default (options:LiveModeOptions = {}) => (bone:IBone, BoneClass:BoneCons
 
 				return `__condition(${parentName}, ctx, ${condBaseId}, [${condNames.join(', ')}])`;
 			} else if ('for' === name) {
+				// Цыклы
 				const forName = `__FOR_ITERATOR_${++gid}`;
 				const forKey = attrs.key || '$index';
 				const forUpd = [];
@@ -270,6 +284,7 @@ export default (options:LiveModeOptions = {}) => (bone:IBone, BoneClass:BoneCons
 				throw 'todo kw';
 			}
 		} else if (TEXT_TYPE === type) {
+			// Просто текст
 			return compileTextNode(parentName, node, updaters, fragments);
 		} else if (TAG_TYPE === type) {
 			const tagId = ++gid;
@@ -277,38 +292,43 @@ export default (options:LiveModeOptions = {}) => (bone:IBone, BoneClass:BoneCons
 
 			let code = [];
 
-			if (node.hasComputedName || node.hasComputedAttrs) {
-				code.push(`__liveNode(${parentName}, ctx, ${tagId}, ${node.compiledName})`);
-				node.hasComputedName && updaters.push(`__updateLiveNode(ctx[${tagId}], ${node.compiledName})`);
+			if (isCustomElems[name]) {
+				// Хмммм
+				code.push(`__component(${parentName}, ctx, ${tagId}, ${node.compiledName})`);
 			} else {
-				code.push(`__node(${parentName}, ${node.compiledName})`);
+				if (node.hasComputedName || node.hasComputedAttrs) {
+					code.push(`__liveNode(${parentName}, ctx, ${tagId}, ${node.compiledName})`);
+					node.hasComputedName && updaters.push(`__updateLiveNode(ctx[${tagId}], ${node.compiledName})`);
+				} else {
+					code.push(`__node(${parentName}, ${node.compiledName})`);
+				}
+
+				code = code.concat(
+					node.compiledAttrs.map((attr:COMPILED_ATTR):string => {
+						let fn;
+						let expr = varName;
+						let [name, value, isExpr] = attr;
+
+						if (/^on-/.test(name)) {
+							fn = '__event';
+							name = name.substr(3);
+							expr = `ctx[${tagId}]`;
+						} else if (isExpr || node.hasComputedName) {
+							fn = htmlProps.hasOwnProperty(name) ? '__dProp' : '__dAttr';
+							expr = `ctx[${tagId}]`;
+						} else {
+							fn = htmlProps.hasOwnProperty(name) ? '__prop' : '__attr';
+						}
+
+						expr = `${fn}(${expr}, ${stringify(htmlProps[name] || name)}, ${value})`;
+
+						isExpr && updaters.push(expr);
+
+						return expr;
+					}),
+					compileChildren(varName, children, updaters, fragments)
+				);
 			}
-
-			code = code.concat(
-				node.compiledAttrs.map((attr:COMPILED_ATTR):string => {
-					let fn;
-					let expr = varName;
-					let [name, value, isExpr] = attr;
-
-					if (/^on-/.test(name)) {
-						fn = '__event';
-						name = name.substr(3);
-						expr = `ctx[${tagId}]`;
-					} else if (isExpr || node.hasComputedName) {
-						fn = htmlProps.hasOwnProperty(name) ? '__dProp' : '__dAttr';
-						expr = `ctx[${tagId}]`;
-					} else {
-						fn = htmlProps.hasOwnProperty(name) ? '__prop' : '__attr';
-					}
-					
-					expr = `${fn}(${expr}, ${stringify(htmlProps[name] || name)}, ${value})`;
-
-					isExpr && updaters.push(expr);
-
-					return expr;
-				}),
-			 	compileChildren(varName, children, updaters, fragments)
-			);
 
 			node.wsBefore && code.unshift(`__text(${parentName}, ' ')`);
 			node.wsAfter && code.push(`__text(${parentName}, ' ')`);
@@ -406,7 +426,7 @@ export default (options:LiveModeOptions = {}) => (bone:IBone, BoneClass:BoneCons
 	// Export DOM methods
 	(
 		'fragment text value node liveNode event prop attr dProp dAttr condition foreach ' +
-		'updateValue updateLiveNode updateCondition updateForeach anim'
+		'updateValue updateLiveNode updateCondition updateForeach anim importComponent component'
 	).split(' ').forEach(name => {
 		globalVars.push(`__${name} = __STDDOM.${name}`);
 	});

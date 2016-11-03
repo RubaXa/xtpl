@@ -542,7 +542,7 @@ export default <SkeletikParser>skeletik({
 		' ': CONTINUE,
 		'>': (lex, bone) => { (bone as XBone).shorty = true; },
 		'{': markAsGroup,
-		'\n': '',
+		'\n': (lex, bone) => closeEntry(bone, false, true),
 		'': fail
 	},
 
@@ -557,7 +557,7 @@ export default <SkeletikParser>skeletik({
 	},
 
 	[KW_TYPE_JS]: {
-		'': (lex, bone) => _keyword.attr(bone, parseJS(lex, CLOSE_PARENTHESIS_CODE))
+		'': (lex, bone) => _keyword.attr(bone, parseJS(lex, _keyword.stopper)),
 	},
 
 	[DEFINE]: {
@@ -753,6 +753,8 @@ export const keywords = (function () {
 			const maxVariants = variants.length;
 
 			KEYWORDS[name] = {
+				stopper: options.stopper || CLOSE_PARENTHESIS_CODE,
+
 				attr(bone:Bone, value:string) {
 					bone.raw.attrs[_attr] = value;
 					return TO_KEYWORD;
@@ -834,3 +836,6 @@ keywords.add('for', [
 
 keywords.add('fx', ' ( @name:js )');
 keywords.add('anim', ' ( @name:js )');
+keywords.add('import', ' @name:var from @from:js', {
+	stopper: ENTER_CODE
+});
