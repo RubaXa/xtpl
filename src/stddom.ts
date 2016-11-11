@@ -1,4 +1,5 @@
 import {AnimatorConstructor} from './animator';
+import components from './components';
 
 let Animator;
 export let GlobalAnimator:AnimatorConstructor = null;
@@ -441,19 +442,9 @@ export function anim(animName, parent, callback) {
 	}
 }
 
-
-const components = {};
-export function importComponent(name, path) {
-	components[name] = {
-		name,
-		path,
-		loaded: false,
-		promise: null,
-	};
-}
-
 export function component(parent, ctx, id, name, attrs) {
 	const anchor = text(parent, '');
+	const comp = components.get(name);
 
 	ctx[id] = {
 		anchor,
@@ -465,38 +456,9 @@ export function component(parent, ctx, id, name, attrs) {
 		handleEvent,
 	};
 
-	if (components.hasOwnProperty(name)) {
-		const comp = components[name];
-
-		if (comp.loaded) {
-			ctx[id].instance = comp(anchor, attrs);
-		} else {
-			comp.loaded.then(() => {
-				ctx[id].instance = comp(anchor, attrs);
-			});
-		}
+	if (comp !== void 0) {
+		comp.init(ctx[id]);
 	} else {
 		throw new Error(`${name} — component not found`);
 	}
 }
-
-
-var x = {
-	template: 'foo.xtpl',
-	controller: 'foo.js',
-	init() {
-		new XXX(attrs, context);
-		this.template(_this, )
-	}
-};
-
-class Hi {
-	static template = '';
-	static props = {
-		name: '',
-	};
-}
-
-xtpl.render(document.body, `
-	Hi[text=\${username}]
-`)
