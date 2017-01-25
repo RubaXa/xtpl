@@ -1,7 +1,10 @@
 (function TodoApp(xtpl, liveMode, {createStore}) {
+	'use strict';
+
+	let gid = 0;
 
 	function byId(id) {
-		return document.getElementById(id.substr(1))
+		return document.getElementById(id.substr(1));
 	}
 
 	// Функция получения шаблона
@@ -13,7 +16,6 @@
 	}
 
 	// Описание `store` приложения
-	let gid = 0;
 	const store = createStore({
 		filter: () => location.hash.split('#')[1] || 'all',
 		filters: ['all', 'active', 'completed'],
