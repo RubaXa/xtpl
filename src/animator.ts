@@ -16,14 +16,11 @@ export interface ITransitionProps {
 }
 
 export default class Animator implements IAnimator {
-	removeOne = null;
-	removeAll = null;
-
 	remove(nodes:any, pool:any) {
-		if (nodes.length === 1 && this.removeOne) {
-			this.removeOne(nodes[0], pool);
-		} else if (this.removeAll) {
-			this.removeAll(nodes, pool);
+		if (nodes.length === 1 && (<any>this).removeOne) {
+			(<any>this).removeOne(nodes[0], pool);
+		} else if ((<any>this).removeAll) {
+			(<any>this).removeAll(nodes, pool);
 		} else {
 			nodes.forEach(node => { node.frag.remove() });
 		}
