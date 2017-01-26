@@ -443,11 +443,11 @@ export function anim(animName, parent, callback) {
 }
 
 export function component(parent, ctx, id, name, attrs) {
-	const anchor = text(parent, '');
-	const comp = components.get(name);
+	const factory = components.get(name);
+	const node = factory(attrs);
 
 	ctx[id] = {
-		anchor,
+		node,
 		instance: null,
 		name,
 		parent,
@@ -456,9 +456,15 @@ export function component(parent, ctx, id, name, attrs) {
 		handleEvent,
 	};
 
-	if (comp !== void 0) {
-		comp.init(ctx[id]);
-	} else {
-		throw new Error(`${name} — component not found`);
-	}
+	node.frag.appendTo(parent);
+
+	return node;
 }
+
+(component as any).reg = function (name, factory) {
+	components.set(name, factory);
+};
+
+(component as any).upd = function (cmp, attrs) {
+	cmp.node.update(attrs);
+};

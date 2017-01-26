@@ -19,11 +19,19 @@ define([
 
 	stddom.setAnimator(Animator.default);
 
-	function fromString(input, attrs) {
-		return xtpl.fromString(input, {
+	function fromString(input, attrs, debug) {
+		var templateFactory = xtpl.fromString(input, {
 			mode: liveMode(),
 			scope: Object.keys(attrs || {}),
-		})(stddom)(attrs).mountTo(document.createElement('div'));
+		})
+		var template = templateFactory(stddom);
+
+		debug && console.log(templateFactory.toString());
+
+		var view = template(attrs).mountTo(document.createElement('div'))
+
+		view.template = template;
+		return view;
 	}
 
 	QUnit.module('xtpl / mode / live');
@@ -270,15 +278,13 @@ ul > for (todo in todos)
 		}, 1);
 	});
 
-	QUnit.test('import', function (assert) {
-		var done = assert.async();
-		var view = fromString('import foo from "./foo"\nfoo[state=${x}]', {x: 'foo'});
+	QUnit.test('Icon / Custom Element', function (assert) {
+		var view = fromString('Icon = [name]\n  i.icon-${name}\nIcon[name=${x}]', {x: 'foo'}, true);
 
-		assert.equal(view.container.innerHTML, '', 'init');
+		window.sandbox.appendChild(view.container);
+		assert.equal(view.container.innerHTML, '<i class="icon-foo"></i>');
 
-		setTimeout(() => {
-			assert.equal(view.container.innerHTML, '<b class="foo"></b>');
-			done();
-		}, 5);
+		view.update({x: 'bar'});
+		assert.equal(view.container.innerHTML, '<i class="icon-bar"></i>');
 	});
 });

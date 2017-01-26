@@ -4,6 +4,8 @@ import * as stddom from "../src/stddom";
 
 type COMPILED_ATTR = [string, string, boolean];
 
+const R_IS_EVENT_ATTR = /^(on-|@)/;
+
 const {htmlProps} = stddom;
 
 const {
@@ -84,7 +86,7 @@ export default (options:LiveModeOptions = {}) => (bone:IBone, BoneClass:BoneCons
 			const value = stringifyAttr(
 				name,
 				attrs[name],
-				htmlProps[name] || /^on-/.test(name) ? null : TO_STR,
+				htmlProps[name] || R_IS_EVENT_ATTR.test(name) ? null : TO_STR,
 				<IBone><any>attrDetails
 			);
 			hasComputedAttrs = hasComputedAttrs ||  attrDetails.hasComputedAttrs;
@@ -294,13 +296,23 @@ export default (options:LiveModeOptions = {}) => (bone:IBone, BoneClass:BoneCons
 
 			if (isCustomElems[name]) {
 				// Хмммм
-				code.push(`__component(${parentName}, ctx, ${tagId}, ${node.compiledName})`);
+				let cmpAttrs = 'var __cmpAttrs = {}\n';
+				let cmpAttrsExp = [cmpAttrs];
+				node.compiledAttrs.forEach((attr:COMPILED_ATTR) => {
+					let [name, value, isExpr] = attr;
+					let expr = `__cmpAttrs[${stringify(htmlProps[name] || name)}] = ${value}\n`;
+
+					cmpAttrs += expr;
+					isExpr && cmpAttrsExp.push(expr);
+				});
+				code.push(`${cmpAttrs}\nvar ${varName} = __component(${parentName}, ctx, ${tagId}, ${node.compiledName}, __cmpAttrs)`);
+				(cmpAttrsExp.length > 1) && updaters.push(`${cmpAttrsExp.join('\n')}\n__component.upd(ctx[${tagId}], __cmpAttrs)`);
 			} else {
 				if (node.hasComputedName || node.hasComputedAttrs) {
-					code.push(`__liveNode(${parentName}, ctx, ${tagId}, ${node.compiledName})`);
+					code.push(`var ${varName} = __liveNode(${parentName}, ctx, ${tagId}, ${node.compiledName})`);
 					node.hasComputedName && updaters.push(`__updateLiveNode(ctx[${tagId}], ${node.compiledName})`);
 				} else {
-					code.push(`__node(${parentName}, ${node.compiledName})`);
+					code.push(`var ${varName} = __node(${parentName}, ${node.compiledName})`);
 				}
 
 				code = code.concat(
@@ -309,10 +321,12 @@ export default (options:LiveModeOptions = {}) => (bone:IBone, BoneClass:BoneCons
 						let expr = varName;
 						let [name, value, isExpr] = attr;
 
-						if (/^on-/.test(name)) {
+						if (R_IS_EVENT_ATTR.test(name)) {
 							fn = '__event';
-							name = name.substr(3);
+							name = name.replace(R_IS_EVENT_ATTR, '');
 							expr = `ctx[${tagId}]`;
+							// todo: добавить название события в camelCase
+							value = `function handle(evt, event) { ${value} }`;
 						} else if (isExpr || node.hasComputedName) {
 							fn = htmlProps.hasOwnProperty(name) ? '__dProp' : '__dAttr';
 							expr = `ctx[${tagId}]`;
@@ -326,6 +340,7 @@ export default (options:LiveModeOptions = {}) => (bone:IBone, BoneClass:BoneCons
 
 						return expr;
 					}),
+
 					compileChildren(varName, children, updaters, fragments)
 				);
 			}
@@ -333,7 +348,7 @@ export default (options:LiveModeOptions = {}) => (bone:IBone, BoneClass:BoneCons
 			node.wsBefore && code.unshift(`__text(${parentName}, ' ')`);
 			node.wsAfter && code.push(`__text(${parentName}, ' ')`);
 
-			return `var ${varName} = ${code.join('\n')}`;
+			return code.join('\n');
 		}
 	}
 
@@ -373,9 +388,28 @@ export default (options:LiveModeOptions = {}) => (bone:IBone, BoneClass:BoneCons
 			} else {
 				res += compileNode('__frag', first, updaters, fragments);
 			}
+		} else if (DEFINE_TYPE === node.type) {
+			// Компонент
+			res += compileChildren('__frag', node.children, updaters, fragments).join('\n');
+			// todo: CamelCase component name
+			return `
+				function Component(attrs) {
+					${node.attrs.map(name => `var ${name} = attrs.${name}`).join('\n')}
+					var ctx = {};
+					${res}
+					${fragments.join('\n')}
+					return {
+						frag: __frag,
+						update: function (__newAttrs) {
+							attrs = __newAttrs;
+							${node.attrs.map(name => `${name} = __newAttrs.${name}`).join('\n')}
+							${updaters.join('\n')}
+						}
+					};
+				}
+			`;
 		} else {
 			throw 'todo';
-			//res = compileNode(node, updaters);
 		}
 
 		return `
@@ -409,7 +443,7 @@ export default (options:LiveModeOptions = {}) => (bone:IBone, BoneClass:BoneCons
 	}
 
 	customElems.forEach(node => {
-		// globals.push(compileNode(node));
+		globals.push(`__component.reg(${node.compiledName}, ${compileFragment(node)})`);
 	});
 
 	if (options.stddom) {

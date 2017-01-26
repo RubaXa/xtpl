@@ -6,6 +6,7 @@
   "scripts": {
     "test": "ntsc && node tests/index.js",
     "build": "ntsc --module es6 && node build.js",
+    "watch": "ntsc --watch",
     "prepublish": "ntsc",
     "push": "npm publish --registry=https://registry.npmjs.org/"
   },
