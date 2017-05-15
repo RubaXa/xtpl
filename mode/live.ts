@@ -56,7 +56,11 @@ export interface LiveModeOptions {
 
 const R_SUPER_CALL = /^super\./;
 
-export default (options:LiveModeOptions = {}) => (bone:IBone, BoneClass:BoneConstructor, {scope:scopeVars}) => {
+export default (options:LiveModeOptions = {}) => (
+	bone:IBone,
+	BoneClass:BoneConstructor,
+	{scope:scopeVars}
+) => {
 	const UNDEF = '__STDLIB_NIL';
 	const TO_STR = '__STDLIB_TO_STRING';
 	const RET_STR = '__STDLIB_RETURN_EMPTY_STRING';
@@ -86,10 +90,11 @@ export default (options:LiveModeOptions = {}) => (bone:IBone, BoneClass:BoneCons
 			const value = stringifyAttr(
 				name,
 				attrs[name],
-				htmlProps[name] || R_IS_EVENT_ATTR.test(name) ? null : TO_STR,
+				htmlProps[name] || isCustomElems[raw.name] || R_IS_EVENT_ATTR.test(name) ? null : TO_STR,
 				<IBone><any>attrDetails
 			);
-			hasComputedAttrs = hasComputedAttrs ||  attrDetails.hasComputedAttrs;
+
+			hasComputedAttrs = hasComputedAttrs ||  attrDetails.hasComputedAttrs || R_IS_EVENT_ATTR.test(name);
 
 			return [name, value, attrDetails.hasComputedAttrs];
 		});
@@ -219,7 +224,7 @@ export default (options:LiveModeOptions = {}) => (bone:IBone, BoneClass:BoneCons
 				`;
 			} else if ('import' === name) {
 				// Импорт блоков
-				return `__importComponent("${node.attrs.name}", ${node.attrs.from});`;
+				return `__COMP.require("${node.attrs.name}", ${node.attrs.from});`;
 			} else if ('if' === name || 'else' === name) {
 				// Условные операторы
 				const condBaseId = ++gid;
@@ -230,14 +235,15 @@ export default (options:LiveModeOptions = {}) => (bone:IBone, BoneClass:BoneCons
 
 					fragments.push(`
 						function ${condName}(frag) {
-							return ${node.attrs.test || 'true'} ? frag || ${condName}_exec() : null;
+							return ${node.attrs.test || 'true'} ? frag || ${condName}_exec(__ctx) : null;
 						}
 						
-						function ${condName}_exec() {
-							var ctx = {};
+						function ${condName}_exec(__parent) {
+							var __ctx = __createContext(__parent);
 							var __fragIf = __fragment();
 							${compileChildren('__fragIf', children, condUpd, fragments).join('\n')}
 							return {
+								ctx: __ctx,
 								frag: __fragIf,
 								update: function () {
 									${condUpd.join('\n')}
@@ -249,9 +255,9 @@ export default (options:LiveModeOptions = {}) => (bone:IBone, BoneClass:BoneCons
 					return condName;
 				});
 
-				updaters.push(`__updateCondition(ctx[${condBaseId}])`);
+				updaters.push(`__updateCondition(__ctx, ${condBaseId})`);
 
-				return `__condition(${parentName}, ctx, ${condBaseId}, [${condNames.join(', ')}])`;
+				return `__condition(${parentName}, __ctx, ${condBaseId}, [${condNames.join(', ')}])`;
 			} else if ('for' === name) {
 				// Цыклы
 				const forName = `__FOR_ITERATOR_${++gid}`;
@@ -262,13 +268,15 @@ export default (options:LiveModeOptions = {}) => (bone:IBone, BoneClass:BoneCons
 				const forFrags = [];
 
 				fragments.push(`
-					function ${forName}(${attrs.as}, ${forKey}) {
-						var ctx = {};
+					function ${forName}(__parent, ${attrs.as}, ${forKey}) {
+						var __ctx = __createContext(__parent);
 						var __fragFor = __fragment();
 						${compileChildren('__fragFor', children, forUpd, forFrags).join('\n')}
 						${forFrags.join('\n')}
 						return {
+							ctx: __ctx,
 							frag: __fragFor,
+							data: ${attrs.as},
 							index: ${forKey},
 							update: function (__${attrs.as}, __${forKey}) {
 								${attrs.as} = __${attrs.as}
@@ -279,9 +287,9 @@ export default (options:LiveModeOptions = {}) => (bone:IBone, BoneClass:BoneCons
 					}
 				`);
 
-				updaters.push(`__updateForeach(ctx[${forId}], ${forBaseArgs})`);
+				updaters.push(`__updateForeach(__ctx, ${forId}, ${forBaseArgs})`);
 
-				return `__foreach(${parentName}, ctx, ${forId}, ${forBaseArgs})`;
+				return `__foreach(${parentName}, __ctx, ${forId}, ${forBaseArgs})`;
 			} else {
 				throw 'todo kw';
 			}
@@ -305,12 +313,15 @@ export default (options:LiveModeOptions = {}) => (bone:IBone, BoneClass:BoneCons
 					cmpAttrs += expr;
 					isExpr && cmpAttrsExp.push(expr);
 				});
-				code.push(`${cmpAttrs}\nvar ${varName} = __component(${parentName}, ctx, ${tagId}, ${node.compiledName}, __cmpAttrs)`);
-				(cmpAttrsExp.length > 1) && updaters.push(`${cmpAttrsExp.join('\n')}\n__component.upd(ctx[${tagId}], __cmpAttrs)`);
+				code.push(`
+					${cmpAttrs}
+					var ${varName} = __COMP.create(__ctx, ${parentName}, ${node.compiledName}, __cmpAttrs)
+				`);
+				(cmpAttrsExp.length > 1) && updaters.push(`${cmpAttrsExp.join('\n')}\n${varName}.update(__cmpAttrs)`);
 			} else {
 				if (node.hasComputedName || node.hasComputedAttrs) {
-					code.push(`var ${varName} = __liveNode(${parentName}, ctx, ${tagId}, ${node.compiledName})`);
-					node.hasComputedName && updaters.push(`__updateLiveNode(ctx[${tagId}], ${node.compiledName})`);
+					code.push(`var ${varName} = __liveNode(${parentName}, __ctx, ${tagId}, ${node.compiledName})`);
+					node.hasComputedName && updaters.push(`__updateLiveNode(__ctx[${tagId}], ${node.compiledName})`);
 				} else {
 					code.push(`var ${varName} = __node(${parentName}, ${node.compiledName})`);
 				}
@@ -320,25 +331,50 @@ export default (options:LiveModeOptions = {}) => (bone:IBone, BoneClass:BoneCons
 						let fn;
 						let expr = varName;
 						let [name, value, isExpr] = attr;
+						let extraStaticExpr = '';
 
 						if (R_IS_EVENT_ATTR.test(name)) {
+							let parsedName:string[];
+							let isRemit = name.charAt(0) === '@';
+
+							parsedName = name.replace(R_IS_EVENT_ATTR, '').split('.');
+
+							name = parsedName.shift();
 							fn = '__event';
-							name = name.replace(R_IS_EVENT_ATTR, '');
-							expr = `ctx[${tagId}]`;
-							// todo: добавить название события в camelCase
-							value = `function handle(evt, event) { ${value} }`;
+							expr = `__ctx[${tagId}]`;
+
+							if (isRemit) {
+								let remitArgs = node.attrs[attr[0]][0];
+
+								value = `{ctx: __this, fn: ${stringify(remitArgs[0].trim())}`;
+
+								if (remitArgs.length > 1) {
+									remitArgs = remitArgs.slice(1)
+												.filter(item => !!item.type)
+												.map(item => stringify(item))
+									;
+									value += `, ${remitArgs.length === 1 ? `arg: ${remitArgs[0]}` : `args: [${remitArgs.join(', ')}]`}`;
+								} else {
+									isExpr = false;
+								}
+
+								value += '}';
+							}
+
+							if (parsedName.length) {
+								extraStaticExpr += `\n${expr}.eventsMods[${stringify(name)}] = ${JSON.stringify(parsedName)};`;
+							}
 						} else if (isExpr || node.hasComputedName) {
 							fn = htmlProps.hasOwnProperty(name) ? '__dProp' : '__dAttr';
-							expr = `ctx[${tagId}]`;
+							expr = `__ctx[${tagId}]`;
 						} else {
 							fn = htmlProps.hasOwnProperty(name) ? '__prop' : '__attr';
 						}
 
 						expr = `${fn}(${expr}, ${stringify(htmlProps[name] || name)}, ${value})`;
-
 						isExpr && updaters.push(expr);
 
-						return expr;
+						return expr + (extraStaticExpr ? `\n${extraStaticExpr}` : '');
 					}),
 
 					compileChildren(varName, children, updaters, fragments)
@@ -357,8 +393,8 @@ export default (options:LiveModeOptions = {}) => (bone:IBone, BoneClass:BoneCons
 			return (value as any).map((item:any) => {
 				if (EXPRESSION_TYPE === item.type) {
 					const id = ++gid;
-					updaters.push(`__updateValue(ctx[${id}], ${item.raw})`);
-					return `__value(${parentName}, ctx, ${id}, ${item.raw})`;
+					updaters.push(`__updateValue(__ctx[${id}], ${item.raw})`);
+					return `__value(${parentName}, __ctx, ${id}, ${item.raw})`;
 				} else {
 					return `__text(${parentName}, ${stringify(item)})`;
 				}
@@ -395,7 +431,7 @@ export default (options:LiveModeOptions = {}) => (bone:IBone, BoneClass:BoneCons
 			return `
 				function Component(attrs) {
 					${node.attrs.map(name => `var ${name} = attrs.${name}`).join('\n')}
-					var ctx = {};
+					var __ctx = {};
 					${res}
 					${fragments.join('\n')}
 					return {
@@ -413,14 +449,17 @@ export default (options:LiveModeOptions = {}) => (bone:IBone, BoneClass:BoneCons
 		}
 
 		return `
-			var ctx = {}
+			var __ctx = {components: []};
 			${res}
 			${fragments.join('\n')}
 			return {
+				ctx: __ctx,
+				frag: __frag,
 				container: null,
 				mountTo: function (container) {
 					this.container = container;
 					__frag.mountTo(container);
+					__lifecycle(__ctx, 'didMount');
 					return this;
 				},
 				update: function (__NEWSCOPE__) {
@@ -443,7 +482,7 @@ export default (options:LiveModeOptions = {}) => (bone:IBone, BoneClass:BoneCons
 	}
 
 	customElems.forEach(node => {
-		globals.push(`__component.reg(${node.compiledName}, ${compileFragment(node)})`);
+		globals.push(`__COMP.inline(${node.compiledName}, ${compileFragment(node)})`);
 	});
 
 	if (options.stddom) {
@@ -460,7 +499,8 @@ export default (options:LiveModeOptions = {}) => (bone:IBone, BoneClass:BoneCons
 	// Export DOM methods
 	(
 		'fragment text value node liveNode event prop attr dProp dAttr condition foreach ' +
-		'updateValue updateLiveNode updateCondition updateForeach anim importComponent component'
+		'updateValue updateLiveNode updateCondition updateForeach anim component ' +
+		'createContext lifecycle'
 	).split(' ').forEach(name => {
 		globalVars.push(`__${name} = __STDDOM.${name}`);
 	});
@@ -470,7 +510,7 @@ export default (options:LiveModeOptions = {}) => (bone:IBone, BoneClass:BoneCons
 	});
 
 	return {
-		args: [options.stddom ? '' : '__STDDOM'],
+		args: [options.stddom ? '' : '__STDDOM', '__COMP'],
 		before: `var ${globalVars.join(',\n')}\n${globals.join('\n')}`,
 		code: results
 	};

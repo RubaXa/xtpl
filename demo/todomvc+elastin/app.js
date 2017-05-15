@@ -1,6 +1,6 @@
-(function TodoApp(xtpl, liveMode, {createStore}) {
-	'use strict';
+'use strict';
 
+(function TodoApp(xtpl, liveMode, {createStore}) {
 	let gid = 0;
 
 	function byId(id) {
@@ -26,7 +26,7 @@
 		completed: ({todos}, query) => query.where('completed', true)(todos),
 		leftCount: ({todos, completed}) => todos.length - completed.length,
 	}, {
-		'todo:create'(evt) {
+		'@todo:create'(evt) {
 			const {newTodo} = evt.target;
 			const value = newTodo.value.trim();
 
@@ -35,21 +35,21 @@
 			newTodo.value = '';
 		},
 
-		'todo:toggle'(evt, todo) {
+		'@todo:toggle'(todo) {
 			todo.completed = !todo.completed;
 		},
 
-		'toggle-all'({target:{checked}}) {
+		'@todo:destroy'(todo) {
+			this.todos.splice(this.todos.indexOf(todo), 1);
+		},
+
+		'@todos:toggle-all'({target:{checked}}) {
 			this.todos.forEach(todo => {
 				todo.completed = checked;
 			});
 		},
 
-		'todo:destroy'(evt, todo) {
-			this.todos.splice(this.todos.indexOf(todo), 1);
-		},
-
-		'todo:clear-completed'() {
+		'@todos:clear-completed'() {
 			this.todos = this.todos.filter(({completed}) => !completed);
 		}
 	});
@@ -59,25 +59,30 @@
 
 	// Компилируем шаблон и получаем фабрику
 	const templateFactory = xtpl.fromString(template, {
-		mode: liveMode({stddom: true}),
-		scope: Object.keys(store), // Для доступа в шаблоне
+		mode: liveMode({}),
+		scope: Object.keys(store), // Список переменных доступных в шаблоне
 	});
 
 	// И вот теперь получаем финальный шаблон
-	const compiledTemplate = templateFactory();
+	xtplStddom.setAnimator(xtplAnimator);
+	const compiledTemplate = templateFactory(xtplStddom);
 
-	// Финал, монтируем шаблон
+	// Финал, создаём view
 	const view = compiledTemplate(store);
 	const container = byId('#root');
 
+	// И монтируем в DOM
 	view.mountTo(container);
 	store.subscribeAll(view.update);
 
+	// Обновляем view по изменению маршрута
 	window.addEventListener('hashchange', () => {
 		view.update(store);
 	});
 	console.clear();
 	// store.todos[0].completed = !store.todos[0].completed;
 
+	// Debug
 	window.store = store;
+	window.templateFactory = templateFactory;
 })(xtpl, xtplModeLive, elastin);

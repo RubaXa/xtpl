@@ -14,26 +14,24 @@
 		section.todoapp
 			header.header
 				h1 | todos
-				form[on-submit="${action('todo:create')}"]
+				form[@submit.prevent="todo:create"]
 					input.new-todo[name="newTodo" placeholder="What needs to be done?" autofocus autocomplete="off"]
 
 			section.main
 				if (todos.length)
-					input.toggle-all[on-change="${action('toggle-all')}" type="checkbox" checked="${!leftCount}"]
+					input.toggle-all[@change="todos:toggle-all" type="checkbox" checked="${!leftCount}"]
 					label[for="toggle-all"] | Mark all as complete
 
 				ul.todo-list
-					for (todo in filtered) track by id
-						anim() > li
-							class.editing: false
-							class.completed: todo.completed
+					fx("pinch") > for (todo in filtered) track by id
+						li[class.completed=${todo.completed}]
 							.view
-								input.toggle[on-change="${action('todo:toggle', todo)}" type="checkbox" checked="${todo.completed}"]
+								input.toggle[@change="todo:toggle ${todo}" type="checkbox" checked="${todo.completed}"]
 								label | ${todo.title}
-								button.destroy[on-click="${action('todo:destroy', todo)}"]
+								button.destroy[@click="todo:destroy ${todo}"]
 							input.edit[value="${todo.title}"]
 
-			anim() > if (todos.length)
+			fx("slide") > if (todos.length)
 				footer.footer
 					span.todo-count
 						strong[>] | ${leftCount}
@@ -44,8 +42,8 @@
 							class.selected: name === filter
 							| ${name.charAt(0).toUpperCase() + name.substr(1)}
 
-					if (leftCount < todos.length)
-						button.clear-completed[on-click="${action('todo:clear-completed')}"] | Clear completed
+					fx("fade") > if (leftCount < todos.length)
+						button.clear-completed[@click="todos:clear-completed"] | Clear completed
 	</script>
 
 	<div id="root"></div>
@@ -53,6 +51,8 @@
 	<script src="http://local.git/elastin/elastin.js"></script>
 	<script src="http://local.git/xtpl/dist/xtpl-bundle.js"></script>
 	<script src="http://local.git/xtpl/dist/xtpl-mode-live-bundle.js"></script>
+	<script src="http://local.git/xtpl/dist/xtpl-stddom-bundle.js"></script>
+	<script src="http://local.git/xtpl/dist/xtpl-animator-bundle.js"></script>
 
 	<script src="./app.js"></script>
 </body>

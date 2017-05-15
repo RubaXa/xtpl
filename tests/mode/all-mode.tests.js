@@ -63,8 +63,9 @@ define([
 						scope: Object.keys(scope)
 					});
 					var template = templateFactory();
-					
-					assert.equal(toHTML(template(scope)), expectedHTML[idx], name + ' vs. ' + JSON.stringify(scope));
+					var results = template(scope);
+
+					assert.equal(toHTML(results), expectedHTML[idx], name + ' vs. ' + JSON.stringify(scope));
 				});
 			});
 		});
@@ -105,14 +106,14 @@ define([
 
 	test(
 		'Nesting + inherit self',
-		'.foo\n  class.&_small: true',
+		'.foo[class.&_small]',
 		{},
 		'<div class=\"foo foo_small\"></div>'
 	);
 	
 	test(
 		'Nesting + inherit self + interpolate',
-		'.foo\n  class.&_${mode}: true',
+		'.foo[class.&_${mode}]',
 		{mode: 'bar'},
 		'<div class=\"foo foo_bar\"></div>'
 	);

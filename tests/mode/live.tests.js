@@ -4,33 +4,43 @@ define([
 	'xtpl/mode/live',
 	'xtpl/src/stddom',
 	'xtpl/src/animator',
+	'xtpl/src/components',
+	'./componentsServiceMock',
 	'../qunit.assert.codeEqual'
 ], function (
 	QUnit,
 	xtplModule,
 	liveModeModule,
 	stddom,
-	Animator
+	Animator,
+	components,
+	componentsServiceMock
 ) {
 	'use strict';
 
 	const xtpl = xtplModule.default;
 	const liveMode = liveModeModule.default;
+	let cmpMock;
+
+	cmpMock = componentsServiceMock(createFromString, components);
 
 	stddom.setAnimator(Animator.default);
 
-	function fromString(input, attrs, debug) {
+	function createFromString(input, attrs, debug) {
 		var templateFactory = xtpl.fromString(input, {
 			mode: liveMode(),
 			scope: Object.keys(attrs || {}),
-		})
-		var template = templateFactory(stddom);
-
+		});
 		debug && console.log(templateFactory.toString());
+		return templateFactory(stddom, cmpMock);
+	}
 
-		var view = template(attrs).mountTo(document.createElement('div'))
+	function fromString(input, attrs, debug) {
+		var template = createFromString(input, attrs, debug);
+		var view = template(attrs).mountTo(document.createElement('div'));
 
 		view.template = template;
+
 		return view;
 	}
 
@@ -152,39 +162,44 @@ define([
 	});
 
 	QUnit.test('for + текст track by id', function (assert) {
-		var view = fromString('for (item in data) track by id\n  | ${item.txt}', {data: [{id: 1, txt: 'foo'}]});
-		var item_1 = view.container.firstChild;
+		const cases = [
+			{input: [1, 2, 3, 4, 5], result: '12345'},
+			{input: [3, 4, 1, 2, 5], result: '34125'},
+			{input: [4, 1, 0, 2, 5], result: '41025', added: ['0']},
+			{input: [5, 1, 2, 3], result: '5123'},
+			{input: [3, 2, 1, 5], result: '3215'},
+			{input: [0], result: '0', added: ['0']},
+			{input: [1, 2, 3, 0], result: '1230', added: ['0', '1', '2', '3']},
+		];
 
-		assert.equal(view.container.textContent, 'foo', 'initial');
+		cases.forEach(function (spec) {
+			spec.input = spec.input.map(function (id) {
+				return {id: id};
+			});
+		});
 
-		view.update({data: [{id: 1, txt: 'foo'}, {id: 2, txt: 'bar'}]});
-		var item_2 = view.container.childNodes[1];
+		var view = fromString('for (item in data) track by id\n  | ${item.id}', {data: cases[0].input});
+		var cache = {};
 
-		assert.equal(view.container.textContent, 'foobar', 'added "bar"');
-		assert.ok(view.container.firstChild === item_1, '0 -> foo');
+		[].forEach.call(view.container.childNodes, function (el) {
+			cache[el.textContent] = el;
+		});
 
-		view.update({data: [{id: 2, txt: 'bar'}, {id: 1, txt: 'foo'}]});
+		assert.equal(view.container.innerHTML, cases[0].result, 'initial');
 
-		assert.equal(view.container.textContent, 'barfoo', 'reverse');
-		assert.ok(view.container.childNodes[0] === item_2, '0 -> bar');
-		assert.ok(view.container.childNodes[1] === item_1, '1 -> foo');
+		cases.slice(1).forEach(function (spec) {
+			view.update({data: spec.input});
 
-		view.update({data: [{id: 3, txt: 'baz'}, {id: 2, txt: 'bar'}, {id: 1, txt: 'foo'}]});
+			assert.equal(view.container.innerHTML, spec.result, spec.result);
 
-		var item_3 = view.container.childNodes[0];
-		assert.equal(view.container.textContent, 'bazbarfoo', 'added "baz"');
-		assert.ok(view.container.childNodes[1] === item_2, '1 -> bar');
-		assert.ok(view.container.childNodes[2] === item_1, '2 -> foo');
-
-		view.update({data: [{id: 1, txt: 'foo'}]});
-
-		assert.equal(view.container.textContent, 'foo', 'removed bar, baz');
-		assert.ok(view.container.childNodes[0] === item_1);
-
-		view.update({data: [{id: 7, txt: 'zzz'}]});
-
-		assert.equal(view.container.textContent, 'zzz', 'added zzz');
-		assert.ok(view.container.childNodes[0] === item_3);
+			[].forEach.call(view.container.childNodes, function (el) {
+				if (cache[el.textContent] !== el) {
+					if (!spec.added || spec.added.indexOf(el.textContent) === -1) {
+						assert.ok(false, 'no cached: ' + el.textContent + ' in ' + spec.result);
+					}
+				}
+			});
+		});
 	});
 
 	QUnit.test('ссылка + текст', function (assert) {
@@ -279,12 +294,134 @@ ul > for (todo in todos)
 	});
 
 	QUnit.test('Icon / Custom Element', function (assert) {
-		var view = fromString('Icon = [name]\n  i.icon-${name}\nIcon[name=${x}]', {x: 'foo'}, true);
+		var view = fromString('Icon = [name]\n  i.icon-${name}\nIcon[name=${x}]', {x: 'foo'});
 
 		window.sandbox.appendChild(view.container);
 		assert.equal(view.container.innerHTML, '<i class="icon-foo"></i>');
 
 		view.update({x: 'bar'});
 		assert.equal(view.container.innerHTML, '<i class="icon-bar"></i>');
+	});
+
+	QUnit.test('Icon / Custom Element / If', function (assert) {
+		var view = fromString('XIf = [expr]\n  if (expr)\n    b\nXIf[expr=${val}]', {val: false});
+
+		window.sandbox.appendChild(view.container);
+		assert.equal(view.container.innerHTML, '');
+
+		view.update({val: true});
+		assert.equal(view.container.innerHTML, '<b></b>');
+
+		view.update({val: false});
+		assert.equal(view.container.innerHTML, '');
+	});
+
+	QUnit.test('Import / Btn / Failed', function (assert) {
+		var done = assert.async();
+		var view = fromString('import Btn from "failed/btn"\nBtn[value="Wow!"]', {val: false});
+
+		window.sandbox.appendChild(view.container);
+		assert.equal(view.container.innerHTML, '<div class=\"component-dummy component-dummy-loading\" data-component=\"Btn\"></div>');
+
+		setTimeout(function () {
+			assert.equal(view.container.innerHTML, '<div class=\"component-dummy component-dummy-failed\" data-component=\"Btn\" data-component-status-text=\"failed/btn\"></div>');
+			done();
+		}, 10);
+	});
+
+	QUnit.test('Import / Btn', function (assert) {
+		var done = assert.async();
+		var view = fromString('import Btn from "./btn"\nBtn[value=${val}]', {val: 'Wow'});
+
+		window.sandbox.appendChild(view.container);
+		assert.equal(view.container.innerHTML, '<div class=\"component-dummy component-dummy-loading\" data-component=\"Btn\"></div>');
+
+		setTimeout(function () {
+			assert.equal(view.container.innerHTML, '<button>Wow</button>');
+
+			view.update({val: 'Wow!1'});
+			assert.equal(view.container.innerHTML, '<button>Wow!1</button>');
+			done();
+		}, 10);
+	});
+
+	QUnit.test('Import / Toggle', function (assert) {
+		var done = assert.async();
+		var log = [];
+		var view = fromString('import Toggle from "./toggle"\nif (show)\n    Toggle[text=${value} log=${log}]', {
+			show: true,
+			log: log,
+			value: 'Click me!',
+		}, true);
+
+		window.sandbox.appendChild(view.container);
+		assert.equal(log + '', '', 'initial');
+
+		setTimeout(function () {
+			assert.equal(view.container.innerHTML, '<div class="toggle">Click me!</div>', 'ready');
+			assert.equal(log + '', 'didMount');
+
+			view.update({show: false, log: log});
+			assert.equal(view.container.innerHTML, '', 'removed');
+			assert.equal(log + '', 'didMount,didUnmount');
+
+			view.update({show: true, value: 'Bingo!', log: log});
+			assert.equal(view.container.innerHTML, '<div class="toggle">Bingo!</div>', 'updated');
+			assert.equal(log + '', 'didMount,didUnmount,didMount');
+
+			done();
+		}, 10);
+	});
+
+	QUnit.test('Import / Foreach', function (assert) {
+		var done = assert.async();
+		var log = [];
+		var view = fromString('import Item from "./item"\nfor (item in items) track by id\n  Item[text=${item.id} log=${log}]', {
+			log: log,
+			items: [{id: 'foo'}, {id: 'bar'}, {id: 'baz'}],
+		}, true);
+
+		window.sandbox.appendChild(view.container);
+
+		setTimeout(function () {
+			assert.equal(view.container.innerHTML, 'foobarbaz', 'ready');
+			assert.equal(log + '', 'foo1.didMount,bar2.didMount,baz3.didMount');
+
+			log.length = 0;
+			view.update({
+				log: log,
+				items: [{id: 'bar'}, {id: 'baz'}, {id: 'qux'}],
+			});
+
+			assert.equal(view.container.innerHTML, 'barbazqux', 'update');
+			assert.equal(log + '', 'qux4.didMount,foo1.didUnmount');
+
+			log.length = 0;
+			view.update({
+				log: log,
+				items: [{id: 'foo'}, {id: 'baz'}, {id: 'qux'}],
+			});
+
+			assert.equal(view.container.innerHTML, 'foobazqux', 'update + revert');
+			assert.equal(log + '', 'foo1.didMount,bar2.didUnmount');
+
+			done();
+		}, 10);
+	});
+
+	QUnit.test('Import / Element with classNames', function (assert) {
+		var done = assert.async();
+		var view = fromString('import Element from "./element"\nElement.foo.${x}', {x: ''}, true);
+
+		window.sandbox.appendChild(view.container);
+
+		setTimeout(function () {
+			assert.equal(view.container.innerHTML, '<div class="foo "></div>', 'ready');
+
+			view.update({x: 'bar'});
+			assert.equal(view.container.innerHTML, '<div class="foo bar"></div>', 'update');
+
+			done();
+		}, 10);
 	});
 });

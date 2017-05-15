@@ -68,6 +68,7 @@ const INLINE_ATTR_VALUE_END = INLINE_ATTR_VALUE + '_end';
 const TEXT = 'text';
 const TEXT_AWAIT = TEXT + '_await';
 const CLASS_ATTR = 'class_attr';
+const CLASS_ATTR_INLINE = 'class_attr_inline';
 const KEYWORD = 'KEYWORD';
 const KEYWORD_END = KEYWORD + '_END';
 const KW_TYPE = 'KW_TYPE';
@@ -174,6 +175,7 @@ function addAttrValue(lex:Lexer, bone:Bone, name:string, values:any[]):void {
 		list = bone.raw.attrs[name] = [];
 	}
 
+	// Именно новый массив, а не .legnth = 0 (!!!)
 	attrValueChain = [];
 
 	if (name === ID_ATTR_NAME && list.length) {
@@ -334,20 +336,28 @@ export default <SkeletikParser>skeletik({
 		}
 	},
 
-	[CLASS_ATTR]: expressionMixin(() => attrValueChain, {
+	[CLASS_ATTR_INLINE]: expressionMixin(() => attrValueChain, {
 		'&': inheritEntryHandle.bind('self'),
-		':': (lex, bone) => {
+		']': (lex, bone) => {
 			const token = lex.takeToken();
-
 			token && attrValueChain.push(token);
-			
+
+			console.log(attrValueChain.slice(0));
+			addAttrValue(lex, bone, CLASS_ATTR_NAME, attrValueChain);
+
+			return INLINE_ATTR_NEXT;
+		},
+		'=': (lex, bone) => {
+			const token = lex.takeToken();
+			token && attrValueChain.push(token);
+
 			addAttrValue(lex, bone, CLASS_ATTR_NAME, [{
 				type: GROUP_TYPE,
-				test: parseJS(lex, ENTER_CODE, 1),
+				test: parseJS(lex, CLOSE_BRACE_CODE, 3),
 				raw: attrValueChain
 			}]);
 
-			attrValueChain = [];
+			return '>' + INLINE_ATTR_VALUE_END;
 		}
 	}),
 
@@ -416,6 +426,7 @@ export default <SkeletikParser>skeletik({
 	},
 
 	[INLINE_ATTR]: {
+		'.': (lex) => lex.getToken() === CLASS_ATTR_NAME ? CLASS_ATTR_INLINE : CONTINUE,
 		']': (lex, bone) => {
 			setInlineAttr(lex, bone, [true]);
 			return INLINE_ATTR_NEXT;

@@ -472,9 +472,16 @@ define(['qunit', 'xtpl/syntax/xtpl', '../qunit.assert.fragEqual'], function (QUn
 		assert.fragEqual(frag.nodes[2].raw, {name: 'div', attrs: {class: 'foo'}});
 	});
 
+	// QUnit.test('div[data-${prop}]', function (assert) {
+	// 	var frag = xtplParser('div[data-${prop}]');
+	//
+	// 	assert.equal(frag.length, 1);
+	// 	assert.fragEqual(frag.first.raw, {});
+	// });
+
 	QUnit.test('input[checked]', function (assert) {
 		var frag = xtplParser('input[checked]');
-		
+
 		assert.equal(frag.length, 1);
 		assert.fragEqual(frag.first.raw, {name: 'input', attrs: {checked: "true"}});
 	});
@@ -893,7 +900,7 @@ define(['qunit', 'xtpl/syntax/xtpl', '../qunit.assert.fragEqual'], function (QUn
 		assert.equal(frag.first.first.last.raw.name, 'i');
 	});
 
-	QUnit.test('class.foo', function (assert) {
+	QUnit.test('div[class.foo]', function (assert) {
 		function testMe(tpl, classes) {
 			var frag = xtplParser(tpl);
 			
@@ -902,28 +909,40 @@ define(['qunit', 'xtpl/syntax/xtpl', '../qunit.assert.fragEqual'], function (QUn
 			assert.deepEqual(frag.first.raw, {name: 'div', attrs: {class: classes}});
 		}
 
-		testMe('div\n  class.foo: attrs.yes', [[{
+		testMe('div[class.foo=${attrs.yes}]', [[{
 			type: 'group',
 			test: 'attrs.yes',
 			raw: ['foo']
 		}]]);
-		
-		testMe('.foo\n  class.bar: attrs.yes', [['foo'], [{
+
+		testMe('.foo[class.bar=${attrs.yes}]', [['foo'], [{
 			type: 'group',
 			test: 'attrs.yes',
 			raw: ['bar']
 		}]]);
 
-		testMe('.foo\n  class.${name}: attrs.yes', [['foo'], [{
+		testMe('.foo[class.${name}=${attrs.yes}]', [['foo'], [{
 			type: 'group',
 			test: 'attrs.yes',
 			raw: [{type: 'expression', raw: 'name'}]
 		}]]);
 
-		testMe('.foo\n  class.x-${name}: attrs.yes', [['foo'], [{
+		testMe('.foo[class.x-${name}=${attrs.yes}]', [['foo'], [{
 			type: 'group',
 			test: 'attrs.yes',
 			raw: ['x-', {type: 'expression', raw: 'name'}]
+		}]]);
+
+		testMe('.foo[class.x-${name}-y=${attrs.yes}]', [['foo'], [{
+			type: 'group',
+			test: 'attrs.yes',
+			raw: ['x-', {type: 'expression', raw: 'name'}, '-y']
+		}]]);
+
+		testMe('.foo[class.${name}-y=${attrs.yes}]', [['foo'], [{
+			type: 'group',
+			test: 'attrs.yes',
+			raw: [{type: 'expression', raw: 'name'}, '-y']
 		}]]);
 	});
 
