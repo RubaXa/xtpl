@@ -1,28 +1,12 @@
+import Block, {IBlock} from './block';
+import {register} from './keywords';
+
 export type LoaderURL = (baseUrl: string, name: string, relativeName?: string) => string;
 
 export interface LoaderOptions {
 	basePath?: string;
 	urlConstructor?: LoaderURL;
 	require?: Function; // todo: typedef
-}
-
-interface IComponent {
-	__view__: {
-		frag: Object
-	};
-
-	__scope__: {
-		attrs: Object;
-	};
-
-	attrs:Object;
-	update(attrs): void;
-	didMount(): void;
-	didUnmount(): void;
-}
-
-interface IComponentFactory {
-	(attrs): IComponent;
 }
 
 function defaultUrlConstructor(basePath: string, name: string) {
@@ -36,22 +20,45 @@ export interface ComponentsService {
 	require: Function,
 }
 
-export function componentsService(options: LoaderOptions = {}):ComponentsService {
-	const queue: {[name: string]: Promise<IComponentFactory>} = {};
+export interface IComponent extends IBlock {
+	(attrs): any;
+	inline: boolean;
+}
+
+export const componentsService = (options: LoaderOptions = {}) => (__STDDOM, __COMP, fromString: Function): ComponentsService => {
+	const queue: {[name: string]: Promise<IBlock>} = {};
 	const imported: {[name: string]: string} = {};
-	const components: {[name: string]: IComponentFactory} = {};
+	const components: {[name: string]: IComponent} = {};
 	const {
 		basePath = '',
 		urlConstructor = defaultUrlConstructor,
 		require:requireModule,
 	} = options;
 
-	function load(name: string, from: string): Promise<IComponentFactory> {
+	function register(name, ClassOrLike) {
+		let Class;
+
+		if (typeof ClassOrLike === 'function') {
+			Class = ClassOrLike;
+			Class.inline = true;
+		} else {
+			Class = Block.classify(ClassOrLike);
+
+			const template = Class.prototype['getTemplate']();
+			const templateFactory = fromString(template, {scope: ['__this__', 'attrs']});
+
+			Class.prototype.name = name;
+			Class.prototype['__template__'] = templateFactory(__STDDOM, __COMP);
+		}
+
+		components[name] = Class;
+
+		return Class;
+	}
+
+	function load(name: string, from: string): Promise<IBlock> {
 		if (!queue.hasOwnProperty(from)) {
-			queue[from] = requireModule(from).then((factory) => {
-				components[name] = factory;
-				return factory;
-			});
+			queue[from] = requireModule(from).then(ClassOrLike => register(name, ClassOrLike));
 		}
 
 		return queue[from];
@@ -92,46 +99,57 @@ export function componentsService(options: LoaderOptions = {}):ComponentsService
 	}
 
 	return {
-		inline(name, template) {
-			components[name] = <IComponentFactory>function (attrs) {
-				var node = template(attrs);
-				return node;
-			};
+		inline(name: string, template: string) {
+			register(name, template);
 		},
 
 		require(as, from) {
 			imported[as] = from;
 		},
 
-		create(ctx, parentFrag, name, attrs) {
-			const cmpFactory = components[name];
+		create(ctx, parentFrag, name, attrs, parent, events) {
+			const XBlock = components[name];
 			let node;
 
-			if (cmpFactory) {
-				const cmpNode = cmpFactory(attrs);
+			if (XBlock) {
+				const cmpNode = XBlock.inline ? XBlock(attrs) : new XBlock(attrs);
 
 				node = cmpNode.hasOwnProperty('__view__') ? {
-					frag: cmpNode.__view__.frag,
+					frag: cmpNode['__view__'].frag,
 					update: (attrs) => cmpNode.update(attrs),
 				} : cmpNode;
 
-				ctx.mounted && cmpNode.didMount && cmpNode.didMount();
+				cmpNode.__parent__ = parent;
+				cmpNode.__events__ = events;
+
+				ctx.connected && cmpNode['connectedCallback'] && cmpNode['connectedCallback']();
 			} else {
 				node = createDummy(name, attrs);
 
 				if (imported[name]) {
 					load(name, imported[name])
-						.then(factory => {
-							const cmpNode = factory(node.attrs);
-							const view = cmpNode.__view__;
+						.then(XBlock => {
+							const cmpNode = new XBlock(node.attrs);
+							const view = cmpNode['__view__'];
+
+							cmpNode['__parent__'] = parent;
+							cmpNode['__events__'] = events;
 
 							ctx.components.push(cmpNode);
-							parentFrag.replaceChildFrag(node.frag, view.frag);
+
+							if (parentFrag.replaceChildFrag) {
+								parentFrag.replaceChildFrag(node.frag, view.frag);
+							} else {
+								parentFrag.insertBefore(view.frag[0], node.frag[0]);
+								parentFrag.removeChild(node.frag[0]);
+							}
 
 							node.frag = view.frag;
 							node.update = (attrs) => cmpNode.update(attrs);
 
-							ctx.mounted && cmpNode.didMount && cmpNode.didMount();
+							__STDDOM.addChildContext(ctx, view.ctx);
+
+							ctx.connected && cmpNode['connectedCallback'] && cmpNode['connectedCallback']();
 						})
 						.catch((err) => {
 							setDummyStatus(node, 'failed', err.stack || err.toString());
@@ -142,8 +160,10 @@ export function componentsService(options: LoaderOptions = {}):ComponentsService
 				}
 			}
 
+			node.events = events;
 			node.frag.appendTo(parentFrag);
+
 			return node;
 		}
 	};
-}
+};

@@ -90,6 +90,13 @@ define([
 		['<h1 class="title-xxl">Hi, xtpl!</h1>', '<h1 class="title-wow">Hi, X!</h1>']
 	);
 
+	// test(
+	// 	'Shorty interpolate syntaxis',
+	// 	'${tag}.{y}.-{y}.{y}-.-{y}-[class.{y}={z}][prop={z} bar="~{z}~"] | Hi, {txt}!',
+	// 	[{tag: 'a', y: 'cls', z: 'foo', txt: 'Wow'}],
+	// 	['<a class=\"cls -cls cls- -cls- cls\" prop=\"foo\" bar=\"~foo~\">Hi, Wow!</a>']
+	// );
+
 	test(
 		'Nesting',
 		'.btn > .&__text',

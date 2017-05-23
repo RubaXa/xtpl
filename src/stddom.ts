@@ -52,14 +52,18 @@ export function handleEvent(evt) {
 
 	if (handle.hasOwnProperty('fn')) {
 		const {ctx} = handle;
-		const fn = ctx[`@${handle.fn}`];
+		const fnName = handle.fn;
 
-		if (handle.hasOwnProperty('arg')) {
-			fn.call(ctx, handle.arg);
-		} else if (handle.hasOwnProperty('args')) {
-			fn.call(ctx, handle.args);
+		if (ctx.dispatchEvent) {
+			ctx.dispatchEvent(fnName, handle.detail == null ? null : handle.detail, evt);
 		} else {
-			fn(evt);
+			let fn = ctx[`@${ctx}`];
+
+			if (handle.hasOwnProperty('detail')) {
+				fn.call(ctx, handle.detail);
+			} else {
+				fn(evt, null);
+			}
 		}
 	} else {
 		handle(evt);
@@ -199,7 +203,7 @@ export function liveNode(parent, ctx, id, name) {
 }
 
 export function text(parent, value) {
-	return append(parent, document.createTextNode(value));
+	return append(parent, document.createTextNode(value == null ? '' : value));
 }
 
 export function value(parent, ctx, id, value) {
@@ -210,7 +214,7 @@ export function value(parent, ctx, id, value) {
 
 export function createContext(parent) {
 	return {
-		mounted: parent.mounted,
+		connected: parent.connected,
 		components: [],
 		next: null,
 		prev: null
@@ -220,7 +224,7 @@ export function createContext(parent) {
 export function addChildContext(parent, child) {
 	const {last} = parent;
 
-	child.mounted = parent.mounted;
+	child.connected = parent.connected;
 	child.parent = parent;
 
 	if (last == null) {
@@ -244,10 +248,11 @@ export function removeContext(child) {
 	(next !== null) && (next.prev = prev);
 }
 
-export function lifecycle(ctx, name: 'didMount' | 'didUnmount') {
-	ctx.mounted = name === 'didMount';
+export function lifecycle(ctx, name: 'connectedCallback' | 'disconnectedCallback') {
+	ctx.connected = name === 'connectedCallback';
 
 	let cursor = ctx.first;
+
 	if (cursor != null) {
 		do {
 			lifecycle(cursor, name);
@@ -336,7 +341,7 @@ export function foreach(parent, ctx, id, data, idProp, iterator) {
 export function updateValue(node, value) {
 	if (node.value !== value) {
 		node.value = value;
-		node.el.nodeValue = value;
+		node.el.nodeValue = value == null ? '' : value;
 	}
 }
 
@@ -415,12 +420,12 @@ export function updateCondition(ctx, id) {
 
 		if (node !== null) {
 			removeContext(node.ctx);
-			lifecycle(node.ctx, 'didUnmount');
+			lifecycle(node.ctx, 'disconnectedCallback');
 		}
 
 		if (newNode !== null) {
 			addChildContext(ctx, newNode.ctx);
-			lifecycle(newNode.ctx, 'didMount');
+			lifecycle(newNode.ctx, 'connectedCallback');
 		}
 
 		condition.node = newNode;
@@ -475,7 +480,7 @@ export function updateForeach(ctx, id, data, idProp, iterator) {
 						}
 
 						addChildContext(ctx, node.ctx);
-						lifecycle(node.ctx, 'didMount');
+						lifecycle(node.ctx, 'connectedCallback');
 
 						node.frag.appendToBefore(parent, oldNodes[pivotIdx + 1] || anchor);
 						animator && animator.append && animator.append([node]);
@@ -495,7 +500,7 @@ export function updateForeach(ctx, id, data, idProp, iterator) {
 					}
 
 					addChildContext(ctx, node.ctx);
-					lifecycle(node.ctx, 'didMount');
+					lifecycle(node.ctx, 'connectedCallback');
 
 					node.frag.appendToBefore(parent, anchor);
 				}
@@ -527,7 +532,7 @@ export function updateForeach(ctx, id, data, idProp, iterator) {
 			}
 
 			removeContext(node.ctx);
-			lifecycle(node.ctx, 'didUnmount');
+			lifecycle(node.ctx, 'disconnectedCallback');
 		}
 
 		node.reused = false;

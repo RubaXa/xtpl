@@ -23,6 +23,7 @@ export const DOT_CODE = 46; // "."
 export const COMMA_CODE = 44; // ","
 export const PIPE_CODE = 124; // "|"
 export const SLASH_CODE = 47; // "/"
+export const DOLLAR_CODE = 36; // "$"
 export const BACKSLASH_CODE = 92; // "\"
 export const ASTERISK_CODE = 42; // "*"
 export const OPEN_BRACE_CODE = 123; // "{"
@@ -105,20 +106,32 @@ export function parseJSCallArgs(lex:Lexer) {
 	return args;
 }
 
-export function expressionMixin(getter:(bone?:Bone) => any[], states):SkeletikState {
+export function expressionMixin(getter:(bone?:Bone) => any[], states, strict?):SkeletikState {
 	const mixStates = {};
+
+	function parse(lex:Lexer, bone, offset) {
+		const state = lex.state;
+		const token = lex.takeToken();
+		const expr = parseJS(lex, CLOSE_BRACE_CODE).slice(offset);
+		const list = getter(bone);
+
+		token && list.push(token);
+		list.push({type: EXPRESSION_TYPE, raw: expr});
+
+		return `>${state}`;
+	}
+
+	// !strict && (mixStates['{'] = (lex:Lexer, bone) => {
+	// 	if (lex.prevCode !== BACKSLASH_CODE && lex.prevCode !== DOLLAR_CODE) {
+	// 		return parse(lex, bone, 1);
+	// 	}
+	//
+	// 	return '-->';
+	// });
 
 	mixStates['$'] = (lex:Lexer, bone) => {
 		if (lex.prevCode !== BACKSLASH_CODE && lex.peek(+1) === OPEN_BRACE_CODE) {
-			const state = lex.state;
-			const token = lex.takeToken();
-			const expr = parseJS(lex, CLOSE_BRACE_CODE).slice(2);
-			const list = getter(bone);
-
-			token && list.push(token);
-			list.push({type: EXPRESSION_TYPE, raw: expr});
-
-			return '>' + state;
+			return parse(lex, bone, 2);
 		}
 
 		return '->';

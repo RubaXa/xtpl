@@ -75,6 +75,50 @@ export default (options:LiveModeOptions = {}) => (
 	let varNum = 0;
 	let varMax = 0;
 
+	function compileEvent(node, attr, name: string, value: string) {
+		let parsedName:string[];
+		let isRemit = name.charAt(0) === '@';
+		let isExpr = true;
+
+		parsedName = name.replace(R_IS_EVENT_ATTR, '').split('.');
+		name = parsedName.shift();
+
+
+		if (isRemit) {
+			let remitArgs = node.attrs[attr[0]][0];
+
+			value = `{
+				ctx: __this__,
+				fn: ${stringify(remitArgs[0] === true ? name : remitArgs[0].trim())},
+				detail: `;
+
+			if (remitArgs.length > 1) {
+				remitArgs = remitArgs.slice(1).filter(item => !!item.type);
+
+				if (remitArgs.length) {
+					value += `{${remitArgs.map(prop => {
+						const value = stringify(prop);
+						return `${prop.raw}: ${value}`;
+					}).join(', ')}}`;
+				} else {
+					value += 'null';
+				}
+			} else {
+				isExpr = false;
+				value += 'null';
+			}
+
+			value += '}';
+		}
+
+		return {
+			name,
+			value,
+			isExpr,
+			mods: parsedName.length ? `eventsMods[${stringify(name)}] = ${JSON.stringify(parsedName)};` : ''
+		};
+	}
+
 	function preprocessing(bone:IBone, slots?:Node[], usedSlots?:any):Node {
 		const raw:any = bone.raw || {};
 		const type = bone.type;
@@ -224,7 +268,7 @@ export default (options:LiveModeOptions = {}) => (
 				`;
 			} else if ('import' === name) {
 				// Импорт блоков
-				return `__COMP.require("${node.attrs.name}", ${node.attrs.from});`;
+				return `__COMP.require("${node.attrs.name}", ${node.attrs.from.replace(/;+$/, '')});`;
 			} else if ('if' === name || 'else' === name) {
 				// Условные операторы
 				const condBaseId = ++gid;
@@ -306,17 +350,42 @@ export default (options:LiveModeOptions = {}) => (
 				// Хмммм
 				let cmpAttrs = 'var __cmpAttrs = {}\n';
 				let cmpAttrsExp = [cmpAttrs];
+				let cmpEvents = [];
+
 				node.compiledAttrs.forEach((attr:COMPILED_ATTR) => {
 					let [name, value, isExpr] = attr;
-					let expr = `__cmpAttrs[${stringify(htmlProps[name] || name)}] = ${value}\n`;
 
-					cmpAttrs += expr;
-					isExpr && cmpAttrsExp.push(expr);
+					if (R_IS_EVENT_ATTR.test(name)) {
+						cmpEvents.push(compileEvent(node, attr, name, value));
+					} else {
+						let expr = `__cmpAttrs[${stringify(name == 'class' ? 'className' : name)}] = ${value}\n`;
+
+						cmpAttrs += expr;
+						isExpr && cmpAttrsExp.push(expr);
+					}
 				});
+
+				const cmdEventsStr = [];
+
+				cmpEvents.forEach(({name, value, isExpr}) => {
+					const eventName = stringify(name);
+
+					cmdEventsStr.push(`${eventName}: ${value}`);
+					isExpr && updaters.push(`${varName}.events[${eventName}] = ${value};`);
+				});
+
 				code.push(`
 					${cmpAttrs}
-					var ${varName} = __COMP.create(__ctx, ${parentName}, ${node.compiledName}, __cmpAttrs)
+					var ${varName} = __COMP.create(
+						__ctx,
+						${parentName},
+						${node.compiledName},
+						__cmpAttrs,
+						__this__,
+						${cmpEvents.length ? `{${cmdEventsStr.join(', ')}}` : 'null'}
+					);
 				`);
+
 				(cmpAttrsExp.length > 1) && updaters.push(`${cmpAttrsExp.join('\n')}\n${varName}.update(__cmpAttrs)`);
 			} else {
 				if (node.hasComputedName || node.hasComputedAttrs) {
@@ -334,35 +403,17 @@ export default (options:LiveModeOptions = {}) => (
 						let extraStaticExpr = '';
 
 						if (R_IS_EVENT_ATTR.test(name)) {
-							let parsedName:string[];
-							let isRemit = name.charAt(0) === '@';
+							const compiledEvent = compileEvent(node, attr, name, value);
 
-							parsedName = name.replace(R_IS_EVENT_ATTR, '').split('.');
-
-							name = parsedName.shift();
 							fn = '__event';
 							expr = `__ctx[${tagId}]`;
 
-							if (isRemit) {
-								let remitArgs = node.attrs[attr[0]][0];
+							name = compiledEvent.name;
+							value = compiledEvent.value;
+							isExpr = compiledEvent.isExpr;
 
-								value = `{ctx: __this, fn: ${stringify(remitArgs[0].trim())}`;
-
-								if (remitArgs.length > 1) {
-									remitArgs = remitArgs.slice(1)
-												.filter(item => !!item.type)
-												.map(item => stringify(item))
-									;
-									value += `, ${remitArgs.length === 1 ? `arg: ${remitArgs[0]}` : `args: [${remitArgs.join(', ')}]`}`;
-								} else {
-									isExpr = false;
-								}
-
-								value += '}';
-							}
-
-							if (parsedName.length) {
-								extraStaticExpr += `\n${expr}.eventsMods[${stringify(name)}] = ${JSON.stringify(parsedName)};`;
+							if (compiledEvent.mods) {
+								extraStaticExpr += `\n${expr}.${compiledEvent.mods}`;
 							}
 						} else if (isExpr || node.hasComputedName) {
 							fn = htmlProps.hasOwnProperty(name) ? '__dProp' : '__dAttr';
@@ -459,12 +510,16 @@ export default (options:LiveModeOptions = {}) => (
 				mountTo: function (container) {
 					this.container = container;
 					__frag.mountTo(container);
-					__lifecycle(__ctx, 'didMount');
+					__lifecycle(__ctx, 'connectedCallback');
 					return this;
 				},
 				update: function (__NEWSCOPE__) {
 					__SCOPE__ = __NEWSCOPE__
-					${scopeVars ? scopeVars.map(name => `${name} = __NEWSCOPE__.${name}`).join('\n') : ''}
+					${scopeVars ? scopeVars
+						.filter(name => /^[_a-z]([0-9a-z_]*)$/i.test(name))
+						.map(name => `${name} = __NEWSCOPE__.${name}`)
+						.join('\n') : ''
+					}
 					${updaters.join('\n')}
 				}
 			}
@@ -474,7 +529,7 @@ export default (options:LiveModeOptions = {}) => (
 	const rootNode = preprocessing(bone);
 	const results = compileFragment(rootNode);
 
-	const globals = [];
+	const globals = ['__COMP && (__COMP = __COMP(__STDDOM, __COMP, this.fromString));'];
 	const globalVars:string[] = [];
 
 	while (varMax--) {
@@ -495,7 +550,7 @@ export default (options:LiveModeOptions = {}) => (
 			`;
 		}).join('\n') + '\nreturn exports;\n})({})')
 	}
-	
+
 	// Export DOM methods
 	(
 		'fragment text value node liveNode event prop attr dProp dAttr condition foreach ' +

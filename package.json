@@ -4,9 +4,9 @@
   "description": "xtpl",
   "main": "dist/xtpl.js",
   "scripts": {
-    "test": "ntsc && node tests/index.js",
-    "build": "ntsc --module es6 && node build.js",
-    "watch": "ntsc --watch",
+    "test": "tsc && node tests/index.js",
+    "build": "tsc --module es6 && node build.js",
+    "watch": "tsc --watch",
     "prepublish": "ntsc",
     "push": "npm publish --registry=https://registry.npmjs.org/"
   },

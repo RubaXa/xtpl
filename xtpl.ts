@@ -26,14 +26,18 @@ export {
 	BoneConstructor,
 }
 
+function prepare(input) {
+	return input.replace(/([^$]){/g, '$1\${');
+}
+
 export default {
 	utils,
 	syntaxUtils,
 	keywords,
 
-	parse(input:string):IBone {
+	parse(input:string): IBone {
 		try {
-			return xtplParser(input);
+			return xtplParser(prepare(input));
 		} catch (err) {
 			console.log(err.pretty);
 			throw err;
@@ -49,9 +53,9 @@ export default {
 		}
 	},
 
-	compile<T>(fragment:IBone, options:IOptions):(scope) => T {
+	compile<T>(fragment:IBone, options:IOptions): (scope) => T {
 		const source = [];
-		const artifact = options.mode(fragment, <BoneConstructor>fragment.constructor, options);
+		const artefact = options.mode(fragment, <BoneConstructor>fragment.constructor, options);
 		const existsSTD = {};
 
 		function parseSTD(code:string):string {
@@ -88,25 +92,35 @@ export default {
 			});
 		}
 
-		artifact.before && source.push(parseSTD(artifact.before));
+		artefact.before && source.push(parseSTD(artefact.before));
 
 		source.push(
 			'return function compiledTemplate(__SCOPE__) {',
 			'  __SCOPE__ = __SCOPE__ || {};'
 		);
 
-		options.scope && options.scope.forEach(name => {
-			source.push(`  var ${name} = __SCOPE__.${name};`);
-		});
+		if (options.scope) {
+			options.scope
+				.filter(name => /^[_a-z]([0-9a-z_]*)$/i.test(name))
+				.forEach(name => {
+					source.push(`  var ${name} = __SCOPE__.${name};`);
+				});
+
+			if (options.scope.indexOf('__this__') === -1) {
+				source.push(`  var __this__ = __SCOPE__;`);
+			}
+		}
+
+
 
 		source.push(
 			'  // CODE:START',
-			'  ' + parseSTD(artifact.code),
+			'  ' + parseSTD(artefact.code),
 			'  // CODE:END'
 		);
 		
 		source.push('}');
-		artifact.after && source.push(artifact.after);
+		artefact.after && source.push(artefact.after);
 
 		source.unshift('"use strict"');
 
@@ -118,13 +132,19 @@ export default {
 			console.log(code);
 		}
 
-		return <any>Function([].concat(artifact.args).join(', '), code);
+		// Создаём фабрику шаблона
+		return <any>Function([].concat(artefact.args).join(', '), code).bind({
+			fromString: (template, extraOptions) => this.fromString(template, {
+				...options,
+				...extraOptions
+			}),
+		});
 	},
 
 	fromString(input:string, options:IOptions) {
 		const fragment = this.parse(input);
-		const template = this.compile(fragment, options);
+		const templateFactory = this.compile(fragment, options);
 		
-		return template;
+		return templateFactory;
 	}
 };

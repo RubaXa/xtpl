@@ -23,6 +23,7 @@ const ENTER_CODE = utils.ENTER_CODE; // "\n"
 const SPACE_CODE = utils.SPACE_CODE; // " "
 const DOT_CODE = utils.DOT_CODE; // "."
 const COMMA_CODE = utils.COMMA_CODE; // ","
+const DOLLAR_CODE = utils.DOLLAR_CODE; // "$"
 const PIPE_CODE = utils.PIPE_CODE; // "|"
 const SLASH_CODE = utils.SLASH_CODE; // "/"
 const BACKSLASH_CODE = utils.BACKSLASH_CODE; // "\"
@@ -269,7 +270,7 @@ export default <SkeletikParser>skeletik({
 				return [addTag(parent, 'div'), ID_OR_CLASS];
 			}
 		},
-		'%': '!' + HIDDEN_CLASS,
+		'%': `!${HIDDEN_CLASS}`,
 		'$': VAR_OR_TAG,
 		'': fail
 	},
@@ -292,7 +293,7 @@ export default <SkeletikParser>skeletik({
 		'$name': CONTINUE,
 		'$name_stopper': TO_ENTRY_STOPPER,
 		'': fail
-	}),
+	}, true),
 
 	[ENTRY_STOPPER_AWAIT]: {
 		' ': CONTINUE,
@@ -340,24 +341,23 @@ export default <SkeletikParser>skeletik({
 		'&': inheritEntryHandle.bind('self'),
 		']': (lex, bone) => {
 			const token = lex.takeToken();
-			token && attrValueChain.push(token);
 
-			console.log(attrValueChain.slice(0));
+			token && attrValueChain.push(token);
 			addAttrValue(lex, bone, CLASS_ATTR_NAME, attrValueChain);
 
 			return INLINE_ATTR_NEXT;
 		},
 		'=': (lex, bone) => {
 			const token = lex.takeToken();
-			token && attrValueChain.push(token);
 
+			token && attrValueChain.push(token);
 			addAttrValue(lex, bone, CLASS_ATTR_NAME, [{
 				type: GROUP_TYPE,
 				test: parseJS(lex, CLOSE_BRACE_CODE, 3),
-				raw: attrValueChain
+				raw: attrValueChain,
 			}]);
 
-			return '>' + INLINE_ATTR_VALUE_END;
+			return `>${INLINE_ATTR_VALUE_END}`;
 		}
 	}),
 
