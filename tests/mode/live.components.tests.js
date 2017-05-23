@@ -241,7 +241,7 @@ define([
 		var view = fromString('import Dropdown from "./dropdown"\nDropdown[@visibility="visibility ${x}"]', {
 			x: 'foo',
 			'@visibility': function (evt) {
-				log.push(evt.type + ':' + evt.detail.state + ':' + evt.detail.x + ':' + evt.originalEvent.target);
+				log.push(evt.type + ':' + JSON.stringify(evt.detail) + ':' + evt.originalEvent.target);
 			}
 		}, true);
 
@@ -249,13 +249,63 @@ define([
 
 		setTimeout(function () {
 			simulateEvent(view.container.firstChild.firstChild, 'click');
-			assert.equal(log[0], 'visibility:true:foo:[object HTMLDivElement]');
+			assert.equal(log[0], 'visibility:{"state":true,"x":"foo"}:[object HTMLDivElement]');
 
 			view.update({x: 'bar'});
 			simulateEvent(view.container.firstChild.firstChild.firstChild, 'click');
 
 			assert.equal(log.length, 2);
-			assert.equal(log[1], 'visibility:false:bar:[object HTMLButtonElement]');
+			assert.equal(log[1], 'visibility:{"state":false,"x":"bar"}:[object HTMLButtonElement]');
+
+			done();
+		}, 10);
+	});
+
+	QUnit.test('Event / Todos / @toggle + @remove', function (assert) {
+		var log = [];
+		var done = assert.async();
+		var items = [{id: 1, done: false}, {id: 2, done: true}];
+		var view = fromString('import Todos from "./todos"\nTodos[@remove @toggle items={items}]', {
+			items,
+			'@toggle'(evt) {
+				const {todo} = evt.detail;
+
+				log.push(evt.type + ':' + todo.id);
+				todo.done = !todo.done;
+				view.update({items: items.slice(0)});
+			},
+			'@remove'(evt) {
+				const {todo} = evt.detail;
+
+				log.push(evt.type + ':' + todo.id);
+				items.splice(items.indexOf(todo), 1);
+				view.update({items: items.slice(0)});
+			}
+		}, true);
+
+		window.sandbox.appendChild(view.container);
+
+		setTimeout(function () {
+			assert.equal(view.container.innerHTML, '<div class=\"todos\"><div class=\"todo\"><b></b><em></em><span>1: false</span></div><div class=\"todo\"><b></b><em></em><span>2: true</span></div></div>');
+
+			simulateEvent(view.container.querySelectorAll('b')[0], 'click');
+
+			assert.equal(log[0], 'toggle:1');
+			assert.equal(view.container.querySelectorAll('.todo span')[0].textContent, '1: true');
+
+			simulateEvent(view.container.querySelectorAll('.todo em')[1], 'click');
+			assert.equal(log[1], 'remove:2');
+			assert.equal(view.container.querySelectorAll('.todo').length, 1);
+
+			items.unshift({id: 3, done: false});
+			view.update({items: items.slice(0)});
+
+			assert.equal(view.container.querySelectorAll('.todo').length, 2);
+			assert.equal(view.container.querySelectorAll('.todo span')[0].textContent, '3: false');
+
+			simulateEvent(view.container.querySelectorAll('.todo em')[0], 'click');
+			assert.equal(log[2], 'remove:3');
+			assert.equal(view.container.querySelectorAll('.todo').length, 1);
 
 			done();
 		}, 10);

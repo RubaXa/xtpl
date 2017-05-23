@@ -78,6 +78,19 @@ define([
 			'./toggle': Toggle,
 			'./item': Item,
 			'./element': Element,
+			'./todos': {
+				getTemplate() {
+					return `
+						.todos > for (todo in attrs.items) track by id
+							.todo
+								b[@click="toggle {todo}"] + em[@click="remove {todo}"]
+								span | {todo.id}: {todo.done}
+					`.split('\n')
+						.slice(1)
+						.map((line, idx, lines) => line.substr(lines[0].match(/^\s*/)[0].length))
+						.join('\n')
+				}
+			},
 		};
 
 		return components.componentsService({

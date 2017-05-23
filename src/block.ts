@@ -56,8 +56,8 @@ export default class Block<A> {
 
 		for (const key in defaults) {
 			if (defaults.hasOwnProperty(key)) {
-				if (attrs[key] == null && defaults.hasOwnProperty(key)) {
-					attrs[key] = defaults[key];
+				if (attrs[key] == null) {
+					attrs[key] = defaults.hasOwnProperty(key) ? defaults[key] : null;
 				}
 			}
 		}
@@ -124,7 +124,6 @@ export default class Block<A> {
 	}
 
 	update(partialAttrs: Partial<A>) {
-		const defaults = this.getDefaults();
 		const previousAttrs = this.attrs;
 		const changed = [];
 		let changedLength = 0;
@@ -134,8 +133,8 @@ export default class Block<A> {
 				const oldValue = previousAttrs[key];
 				let newValue = partialAttrs[key];
 
-				if (newValue == null && defaults.hasOwnProperty(key)) {
-					newValue = defaults[key];
+				if (newValue == null) {
+					newValue = null;
 				}
 
 				if (oldValue !== newValue) {
